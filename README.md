@@ -6,7 +6,7 @@ SolForge is a universal transaction builder API for Solana. Describe what you wa
 
 > 🏆 Built entirely by AI agents for the [Colosseum Agent Hackathon](https://www.colosseum.org/)
 
-**[Live Demo](https://solforge.dev)** · **[API Docs](#api-reference)** · **[GitHub](https://github.com/rikisann/solforge)**
+**[Live Demo](https://started-acquisition-liz-department.trycloudflare.com)** · **[API Docs](#api-reference)** · **[GitHub](https://github.com/rikisann/solforge)**
 
 ---
 
