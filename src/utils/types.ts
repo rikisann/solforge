@@ -87,3 +87,89 @@ export interface SwapQuote {
   priceImpactPct: string;
   route: any[];
 }
+
+// Multi-build types
+export interface MultiBuildIntent {
+  intents: BuildIntent[];
+  payer: string;
+  network?: 'mainnet' | 'devnet';
+  priorityFee?: number;
+  computeBudget?: number;
+}
+
+export interface MultiBuildResponse {
+  success: boolean;
+  transaction?: string; // base64 serialized transaction
+  simulation?: SimulationResult;
+  details?: MultiTransactionDetails;
+  error?: string;
+}
+
+export interface MultiTransactionDetails {
+  protocols: string[];
+  totalInstructions: number;
+  accounts: string[];
+  estimatedFee?: string;
+  intentsProcessed: number;
+  breakdown: Array<{
+    intent: string;
+    protocol: string;
+    instructions: number;
+  }>;
+}
+
+// Decode types
+export interface DecodeRequest {
+  transaction: string; // base64 encoded transaction
+}
+
+export interface DecodeResponse {
+  success: boolean;
+  decoded?: DecodedTransaction;
+  error?: string;
+}
+
+export interface DecodedTransaction {
+  instructions: DecodedInstruction[];
+  accounts: string[];
+  recentBlockhash?: string;
+  feePayer?: string;
+}
+
+export interface DecodedInstruction {
+  programId: string;
+  protocol?: string;
+  protocolName?: string;
+  description?: string;
+  accounts: Array<{
+    pubkey: string;
+    isSigner: boolean;
+    isWritable: boolean;
+  }>;
+  data: string; // hex encoded instruction data
+}
+
+// Estimate types
+export interface EstimateRequest {
+  intent?: string;
+  intents?: BuildIntent[];
+  params?: Record<string, any>;
+  payer: string;
+  network?: 'mainnet' | 'devnet';
+  priorityFee?: number;
+  computeBudget?: number;
+}
+
+export interface EstimateResponse {
+  success: boolean;
+  estimate?: TransactionEstimate;
+  error?: string;
+}
+
+export interface TransactionEstimate {
+  baseFee: string; // in SOL
+  priorityFee: string; // in SOL
+  totalFee: string; // in SOL
+  computeUnits: number;
+  rentCost?: string; // in SOL (for account creation)
+}
