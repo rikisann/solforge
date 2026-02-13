@@ -296,6 +296,34 @@ export class IntentParser {
       action: 'withdraw',
       extractor: () => ({})
     },
+    // No-amount lending patterns: "supply USDC to Kamino" / "supply that USDC to Kamino"
+    {
+      pattern: /(?:supply|deposit|lend|put|add|provide)\s+(?:that\s+|the\s+|my\s+|some\s+)?(\w+)\s+(?:to|on|into|in)\s+(?:kamino|klend)(?:\s+(?:finance|lending))?/i,
+      protocol: 'kamino',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: 0, // Will use full balance or require amount
+        token: match[1].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:supply|deposit|lend|put|add|provide)\s+(?:that\s+|the\s+|my\s+|some\s+)?(\w+)\s+(?:to|on|into|in)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: 0,
+        token: match[1].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:supply|deposit|lend|put|add|provide)\s+(?:that\s+|the\s+|my\s+|some\s+)?(\w+)\s+(?:to|on|into|in)\s+(?:solend)/i,
+      protocol: 'solend',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: 0,
+        token: match[1].toUpperCase()
+      })
+    },
     // Generic lending patterns (default to Kamino when no protocol specified)
     {
       pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)$/i,

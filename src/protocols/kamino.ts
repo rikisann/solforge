@@ -78,7 +78,20 @@ export class KaminoProtocol implements ProtocolHandler {
     if (mintInfo.value?.data && 'parsed' in mintInfo.value.data) {
       decimals = mintInfo.value.data.parsed.info.decimals;
     }
-    const amountBN = new BN(Math.floor(intent.params.amount * Math.pow(10, decimals)));
+    // If amount is 0, look up wallet's full token balance
+    let amount = intent.params.amount;
+    if (!amount || amount <= 0) {
+      try {
+        const { getAssociatedTokenAddress } = require('@solana/spl-token');
+        const ata = await getAssociatedTokenAddress(mintPk, new PublicKey(intent.payer));
+        const balance = await connection.getTokenAccountBalance(ata);
+        amount = parseFloat(balance.value.uiAmountString || '0');
+        if (amount <= 0) throw new Error('No token balance found');
+      } catch (e: any) {
+        throw new Error(`Cannot determine amount. Specify an amount or ensure wallet has ${intent.params.token} balance.`);
+      }
+    }
+    const amountBN = new BN(Math.floor(amount * Math.pow(10, decimals)));
 
     let kaminoAction: any;
     const commonArgs = [
