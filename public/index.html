@@ -184,6 +184,9 @@
                                 <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Buy 1 SOL of pair JDDgQhrQDie1AHAYRqpKW68EiZQpGfmJaNdZrqabAguq')">
                                     <span class="text-pink-400">💎</span> Buy SOL of pair
                                 </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Swap 0.5 SOL for USDC with 3% slippage and tip 0.01 SOL to Jito')">
+                                    <span class="text-orange-400">⛓️</span> Multi: Swap + Jito tip
+                                </button>
                             </div>
                         </div>
 
@@ -227,35 +230,6 @@
                         </div>
                         
                         <!-- Example Prompts -->
-                        <div class="space-y-3">
-                            <p class="text-sm text-slate-400 flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                </svg>
-                                Try an example prompt:
-                            </p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Ape 2 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
-                                    <span class="text-orange-400">🔥</span> Ape 2 SOL into BONK
-                                </button>
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Convert 100 USDC to SOL with 0.5% slippage')">
-                                    <span class="text-blue-400">💱</span> Convert 100 USDC to SOL
-                                </button>
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Liquid stake 10 SOL with Marinade')">
-                                    <span class="text-purple-400">🥩</span> Liquid stake with Marinade
-                                </button>
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Write onchain memo: gm from SolForge')">
-                                    <span class="text-green-400">📝</span> Write onchain memo
-                                </button>
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Swap 5 SOL for BONK on Jupiter')">
-                                    <span class="text-yellow-400">🔄</span> Swap SOL for BONK
-                                </button>
-                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Buy 1 SOL of pair JDDgQhrQDie1AHAYRqpKW68EiZQpGfmJaNdZrqabAguq')">
-                                    <span class="text-pink-400">💎</span> Buy SOL of pair
-                                </button>
-                            </div>
-                        </div>
-                        
                         <!-- Build Button -->
                         <button id="build-btn" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center" onclick="buildTransaction()">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
