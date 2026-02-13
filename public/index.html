@@ -1166,11 +1166,7 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
                     preflightCommitment: 'processed'
                 });
 
-                // Wait for confirmation
-                signBtn.textContent = 'Confirming...';
-                await getConnection().confirmTransaction(signature, 'confirmed');
-
-                // Show success result
+                // Show success immediately — tx is submitted, user can track on Solscan
                 resultDiv.innerHTML = `
                     <div class="p-4 bg-emerald-900/50 border border-emerald-700 rounded-xl text-emerald-200">
                         <div class="flex items-center mb-2">
