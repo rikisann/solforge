@@ -540,6 +540,57 @@
                     </div>
                 </details>
 
+                <!-- Execute Mode -->
+                <details class="group bg-slate-900 border border-emerald-700/50 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-xs font-bold">NEW</span>
+                            <span class="font-mono text-slate-200">Execute Mode</span>
+                            <span class="text-slate-400 text-sm">— One API call from English to onchain</span>
+                        </div>
+                    </summary>
+                    <div class="p-5 border-t border-slate-700 space-y-4">
+                        <p class="text-slate-300 text-sm">Add <code class="text-emerald-400">execute: true</code> and a <code class="text-emerald-400">privateKey</code> to <code>/api/build/natural</code> to build, sign, and send in one call.</p>
+
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">One-Call Execute</h4>
+                            <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/build/natural \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Swap 0.1 SOL for USDC",
+    "payer": "YOUR_PUBLIC_KEY",
+    "privateKey": "base58_private_key",
+    "execute": true
+  }'
+
+// Response:
+{
+  "success": true,
+  "executed": true,
+  "signature": "5UfDu...",
+  "explorerUrl": "https://solscan.io/tx/5UfDu...",
+  "transaction": "base64...",
+  "details": { ... }
+}</pre>
+                        </div>
+
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Standalone Execute (POST /api/execute)</h4>
+                            <p class="text-slate-400 text-sm">Build first, inspect the transaction, then execute separately.</p>
+                            <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction": "base64_unsigned_transaction",
+    "privateKey": "base58_private_key"
+  }'</pre>
+                        </div>
+
+                        <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                            <p class="text-yellow-300 text-sm"><strong>⚠️ Security:</strong> Always use HTTPS. Private keys are used in-memory only, never logged or stored. Response includes <code>X-Solforge-Warning: private-key-provided</code> header.</p>
+                        </div>
+                    </div>
+                </details>
+
                 <!-- POST /api/build -->
                 <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
                     <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">

@@ -8,6 +8,7 @@ import { ProtocolRegistry } from '../protocols';
 import { BuildIntent, NaturalLanguageIntent, MultiBuildIntent, DecodeRequest, EstimateRequest } from '../utils/types';
 import { VersionedTransaction, TransactionMessage, SystemProgram, PublicKey, TransactionInstruction, AddressLookupTableAccount } from '@solana/web3.js';
 import { RPCConnection } from '../utils/connection';
+import { executeTransaction, executeMultipleTransactions } from '../utils/execute';
 import { 
   validateBuildIntent, 
   validateNaturalIntent,
@@ -128,6 +129,11 @@ function generateErrorSuggestions(error: string, parsedIntent?: any): string[] {
 // Build transaction from natural language
 router.post('/api/build/natural', validateNaturalIntent, async (req: Request, res: Response) => {
   let parsedIntent: any = null;
+  const executeMode = req.body.execute === true && req.body.privateKey;
+  
+  if (req.body.privateKey) {
+    res.setHeader('X-Solforge-Warning', 'private-key-provided');
+  }
   
   try {
     const naturalIntent: NaturalLanguageIntent = req.body;
@@ -372,6 +378,23 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       );
       const summary = `${parsedIntents.length} operations: ${summaryParts.join(', ')}`;
       
+      // Execute mode for multi-intent
+      if (executeMode) {
+        const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet' as const;
+        const txBases = transactions.map(t => t.transaction);
+        const execResults = await executeMultipleTransactions(txBases, req.body.privateKey, network);
+        res.json({
+          success: true,
+          executed: true,
+          multi: true,
+          signatures: execResults.map(r => r.signature),
+          explorerUrls: execResults.map(r => r.explorerUrl),
+          transactions,
+          summary
+        });
+        return;
+      }
+
       res.json({
         success: true,
         multi: true,
@@ -443,19 +466,29 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
         };
         const transaction = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
         
-        res.json({
+        const responseData: any = {
           success: true,
           transaction,
           details: {
             protocol: 'jupiter',
-            resolvedDex: parsedIntent.protocol, // Show which DEX was identified
+            resolvedDex: parsedIntent.protocol,
             parsedIntent: parsedIntent,
             confidence: parsedIntent.confidence,
             note: parsedIntent.protocol !== 'jupiter' 
               ? `Token identified on ${parsedIntent.protocol} via DexScreener. Routed through Jupiter for optimal execution.`
               : undefined
           }
-        });
+        };
+
+        if (executeMode) {
+          const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet' as const;
+          const execResult = await executeTransaction(transaction, req.body.privateKey, network);
+          responseData.executed = true;
+          responseData.signature = execResult.signature;
+          responseData.explorerUrl = execResult.explorerUrl;
+        }
+
+        res.json(responseData);
         return;
       } catch (jupiterError) {
         // Fall back to regular transaction building if Jupiter fails
@@ -481,6 +514,18 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       result.details.confidence = parsedIntent.confidence;
     }
     
+    if (executeMode && result.success && result.transaction) {
+      const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet' as const;
+      const execResult = await executeTransaction(result.transaction, req.body.privateKey, network);
+      res.json({
+        ...result,
+        executed: true,
+        signature: execResult.signature,
+        explorerUrl: execResult.explorerUrl,
+      });
+      return;
+    }
+
     res.json(result);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to parse intent';
@@ -1261,5 +1306,50 @@ function mapToBuilderIntent(protocol: string, action: string): string {
   // Fallback: try protocol-action, then just action
   return `${protocol}-${action}`;
 }
+
+// Standalone execute endpoint — build first, inspect, then execute
+router.post('/api/execute', async (req: Request, res: Response) => {
+  try {
+    const { transaction, privateKey, network } = req.body;
+
+    if (!transaction || !privateKey) {
+      res.status(400).json({
+        success: false,
+        error: 'Both "transaction" and "privateKey" are required',
+      });
+      return;
+    }
+
+    // Warn about private key usage
+    res.setHeader('X-Solforge-Warning', 'private-key-provided');
+
+    const resolvedNetwork = (network === 'devnet') ? 'devnet' : 'mainnet' as const;
+
+    // Support array of transactions
+    if (Array.isArray(transaction)) {
+      const results = await executeMultipleTransactions(transaction, privateKey, resolvedNetwork);
+      res.json({
+        success: true,
+        executed: true,
+        signatures: results.map(r => r.signature),
+        explorerUrls: results.map(r => r.explorerUrl),
+      });
+      return;
+    }
+
+    const result = await executeTransaction(transaction, privateKey, resolvedNetwork);
+    res.json({
+      success: true,
+      executed: true,
+      signature: result.signature,
+      explorerUrl: result.explorerUrl,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to execute transaction',
+    });
+  }
+});
 
 export default router;
