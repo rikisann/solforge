@@ -264,6 +264,28 @@ export class IntentParser {
         slippage: match[3] ? parseFloat(match[3]) : undefined
       })
     },
+    // "buy 5 BONK" / "buy USDC" — interpreted as "buy X SOL worth of TOKEN" (default 1 SOL if no amount)
+    {
+      pattern: /^buy\s+(?:(\d+(?:\.\d+)?)\s+)?(\w+)$/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: match[1] ? parseFloat(match[1]) : 1,
+        token: match[2].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "sell 5 BONK" / "sell USDC" — sell token for SOL
+    {
+      pattern: /^sell\s+(?:(\d+(?:\.\d+)?)\s+)?(\w+)$/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: match[1] ? parseFloat(match[1]) : 1,
+        token: match[2].toUpperCase(),
+        slippage: undefined
+      })
+    },
     // "spend 2 sol on TOKEN"
     {
       pattern: /spend\s+(\d+(?:\.\d+)?)\s+sol\s+on\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
