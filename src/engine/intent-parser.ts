@@ -1,5 +1,6 @@
 import { NaturalLanguageIntent, ParsedIntent } from '../utils/types';
 import { resolveMint } from '../utils/connection';
+import { TokenResolver } from './token-resolver';
 
 interface ParsePattern {
   pattern: RegExp;
@@ -123,21 +124,11 @@ export class IntentParser {
         amount: parseFloat(match[1])
       })
     },
-    // Pump.fun patterns
-    // "buy 0.5 sol of BiRn5SWNvRnA43Rr3Zv24qPnzTQHHZBfoNBit1Gzpump" (auto-detect pump suffix)
-    {
-      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44}pump)\b/i,
-      protocol: 'pumpfun',
-      action: 'buy',
-      extractor: (match) => ({
-        amount: parseFloat(match[1]),
-        token: match[2]
-      })
-    },
-    // "buy 0.5 sol of TOKEN_ADDRESS" (any address)
+    // Token address buy/sell patterns — protocol resolved dynamically via DexScreener
+    // "buy 0.5 sol of TOKEN_ADDRESS" / "buy 0.5sol of this token TOKEN_ADDRESS"
     {
       pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
-      protocol: 'pumpfun',
+      protocol: '__resolve__',
       action: 'buy',
       extractor: (match) => ({
         amount: parseFloat(match[1]),
@@ -147,14 +138,25 @@ export class IntentParser {
     // "buy TOKEN_ADDRESS with 0.5 sol"
     {
       pattern: /buy\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(?:with\s+)?(\d+(?:\.\d+)?)\s*sol/i,
-      protocol: 'pumpfun',
+      protocol: '__resolve__',
       action: 'buy',
       extractor: (match) => ({
         amount: parseFloat(match[2]),
         token: match[1]
       })
     },
-    // "buy 0.5 SOL on pump.fun" (no token specified)
+    // "sell 0.5 sol of TOKEN_ADDRESS" / "sell 100 TOKEN_ADDRESS"
+    {
+      pattern: /sell\s+(\d+(?:\.\d+)?)\s*(?:sol\s+)?(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2]
+      })
+    },
+    // Explicit pump.fun patterns (when user specifies the DEX)
+    // "buy 0.5 SOL on pump.fun"
     {
       pattern: /buy\s+(\d+(?:\.\d+)?)\s+(\w+)?\s*(?:on\s+)?(?:pump\.?fun|pump)/i,
       protocol: 'pumpfun',
@@ -162,16 +164,6 @@ export class IntentParser {
       extractor: (match) => ({
         amount: parseFloat(match[1]),
         token: match[2] || null
-      })
-    },
-    // "sell 0.5 sol of TOKEN_ADDRESS"
-    {
-      pattern: /sell\s+(\d+(?:\.\d+)?)\s*(?:sol\s+)?(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
-      protocol: 'pumpfun',
-      action: 'sell',
-      extractor: (match) => ({
-        amount: parseFloat(match[1]),
-        token: match[2]
       })
     },
     {
@@ -299,6 +291,38 @@ export class IntentParser {
   ];
 
   static parseNaturalLanguage(intent: NaturalLanguageIntent): ParsedIntent {
+    return this._parseSync(intent);
+  }
+
+  /**
+   * Async version that resolves token addresses via DexScreener API.
+   * Use this when you need dynamic protocol resolution.
+   */
+  static async parseNaturalLanguageAsync(intent: NaturalLanguageIntent): Promise<ParsedIntent> {
+    const result = this._parseSync(intent);
+
+    // If protocol is __resolve__, look up the token on DexScreener
+    if (result.protocol === '__resolve__' && result.params.token) {
+      const { protocol, pool, tokenInfo } = await TokenResolver.resolveProtocol(result.params.token);
+      result.protocol = protocol;
+      if (pool) result.params.pool = pool;
+      if (tokenInfo) {
+        result.params._tokenInfo = {
+          symbol: tokenInfo.symbol,
+          name: tokenInfo.name,
+          primaryDex: tokenInfo.primaryDex,
+          allDexes: tokenInfo.allDexes,
+          priceUsd: tokenInfo.priceUsd,
+          liquidity: tokenInfo.liquidity,
+        };
+      }
+      result.confidence = tokenInfo ? 0.95 : 0.7;
+    }
+
+    return result;
+  }
+
+  private static _parseSync(intent: NaturalLanguageIntent): ParsedIntent {
     const originalPrompt = intent.prompt.trim();
     const prompt = originalPrompt.toLowerCase();
     
@@ -314,7 +338,7 @@ export class IntentParser {
           // If 'to' looks like a token symbol rather than an address
           params.to = resolveMint(params.to);
         }
-        if (params.token) params.token = resolveMint(params.token);
+        if (params.token && params.token.length <= 10) params.token = resolveMint(params.token);
         
         return {
           protocol: pattern.protocol,

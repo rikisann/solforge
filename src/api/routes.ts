@@ -54,13 +54,40 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
   try {
     const naturalIntent: NaturalLanguageIntent = req.body;
     
-    // Parse natural language to structured intent
-    const parsedIntent = IntentParser.parseNaturalLanguage(naturalIntent);
+    // Parse natural language to structured intent (async to resolve token addresses via DexScreener)
+    const parsedIntent = await IntentParser.parseNaturalLanguageAsync(naturalIntent);
     
+    // Map resolved protocol + action to the correct intent name for the builder
+    const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
+
+    // Transform buy/sell params to swap params for DEX protocols
+    let finalParams = { ...parsedIntent.params };
+    if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
+        ['jupiter', 'raydium', 'orca', 'meteora'].includes(parsedIntent.protocol)) {
+      const solMint = 'So11111111111111111111111111111111111111112';
+      if (parsedIntent.action === 'buy') {
+        finalParams = {
+          from: solMint,
+          to: finalParams.token,
+          amount: finalParams.amount,
+          slippage: finalParams.slippage || 1.0,
+          pool: finalParams.pool,
+        };
+      } else {
+        finalParams = {
+          from: finalParams.token,
+          to: solMint,
+          amount: finalParams.amount,
+          slippage: finalParams.slippage || 1.0,
+          pool: finalParams.pool,
+        };
+      }
+    }
+
     // Convert to BuildIntent
     const buildIntent: BuildIntent = {
-      intent: parsedIntent.action,
-      params: parsedIntent.params,
+      intent: resolvedIntent,
+      params: finalParams,
       payer: naturalIntent.payer,
       network: naturalIntent.network,
       priorityFee: naturalIntent.priorityFee,
@@ -743,6 +770,37 @@ function getProtocolProgramId(protocolName: string): string {
 
 function getProtocolDocumentation(protocolName: string): string {
   return `https://docs.solforge.dev/protocols/${protocolName}`;
+}
+
+/**
+ * Maps a resolved protocol + action to the correct intent name used by the protocol handler.
+ * E.g. protocol='meteora' + action='buy' → 'meteora-swap'
+ *      protocol='raydium' + action='buy' → 'raydium-swap'
+ *      protocol='pumpfun' + action='buy' → 'pumpfun-buy' (pump.fun has distinct buy/sell)
+ */
+function mapToBuilderIntent(protocol: string, action: string): string {
+  const mapping: Record<string, Record<string, string>> = {
+    'jupiter': { buy: 'swap', sell: 'swap', swap: 'swap' },
+    'raydium': { buy: 'raydium-swap', sell: 'raydium-swap', swap: 'raydium-swap' },
+    'orca': { buy: 'orca-swap', sell: 'orca-swap', swap: 'orca-swap' },
+    'meteora': { buy: 'meteora-swap', sell: 'meteora-swap', swap: 'meteora-swap' },
+    'pumpfun': { buy: 'pumpfun-buy', sell: 'pumpfun-sell', create: 'pumpfun-create' },
+    'marinade': { stake: 'marinade-stake', unstake: 'marinade-unstake' },
+    'system': { transfer: 'transfer' },
+    'spl-token': { transfer: 'token-transfer' },
+    'memo': { memo: 'memo' },
+    'jito': { tip: 'tip' },
+    'stake': { stake: 'stake', delegate: 'delegate', deactivate: 'deactivate', withdraw: 'withdraw' },
+    'token2022': { transfer: 'token2022-transfer' },
+  };
+
+  const protocolMap = mapping[protocol];
+  if (protocolMap && protocolMap[action]) {
+    return protocolMap[action];
+  }
+
+  // Fallback: try protocol-action, then just action
+  return `${protocol}-${action}`;
 }
 
 export default router;
