@@ -32,8 +32,15 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(corsHeaders);
 app.use(logRequests);
 
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Serve static files from public directory (no caching for dev/demo)
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+  }
+}));
 
 // API routes
 app.use('/', routes);
