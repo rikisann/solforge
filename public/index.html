@@ -805,9 +805,11 @@
         let lastTransactionData = null;
         let connection = null;
 
-        // Initialize connection
-        if (typeof solanaWeb3 !== 'undefined') {
-            connection = new solanaWeb3.Connection('/api/rpc');
+        function getConnection() {
+            if (!connection && typeof solanaWeb3 !== 'undefined') {
+                connection = new solanaWeb3.Connection('/api/rpc');
+            }
+            return connection;
         }
 
         // Wallet connection
@@ -920,14 +922,14 @@
                 // Send transaction
                 signBtn.textContent = 'Sending transaction...';
                 const rawTransaction = signedTransaction.serialize();
-                const signature = await connection.sendRawTransaction(rawTransaction, {
+                const signature = await getConnection().sendRawTransaction(rawTransaction, {
                     skipPreflight: false,
                     preflightCommitment: 'processed'
                 });
 
                 // Wait for confirmation
                 signBtn.textContent = 'Confirming...';
-                await connection.confirmTransaction(signature, 'confirmed');
+                await getConnection().confirmTransaction(signature, 'confirmed');
 
                 // Show success result
                 resultDiv.innerHTML = `
