@@ -663,7 +663,7 @@ router.get('/api/resolve', async (req: Request, res: Response) => {
     }
     
     // Try token resolution
-    const tokenResult = await TokenResolver.resolveToken(query);
+    const tokenResult = await TokenResolver.resolve(query);
     if (tokenResult) {
       return res.json({ success: true, token: tokenResult });
     }
