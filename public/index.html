@@ -669,12 +669,10 @@
             }
         }
 
-        // Set example in the form and auto-build
+        // Set example in the form
         function setExample(text) {
             document.getElementById('prompt-input').value = text;
             document.getElementById('prompt-input').focus();
-            // Auto-trigger build so the user sees it work immediately
-            buildTransaction();
         }
 
         // Copy to clipboard function
