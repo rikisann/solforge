@@ -328,11 +328,17 @@ export class TransactionBuilder {
 
   // Helper method to parse simulation errors into human-readable messages
   private static parseSimulationError(error: string): string {
+    if (error.includes('AccountNotFound')) {
+      return 'Payer account not found on this network. Make sure the wallet exists and is funded on the selected network (devnet/mainnet). Tip: disable simulation to build without a funded wallet.';
+    }
+    if (error.includes('InvalidAccountForFee')) {
+      return 'Payer account cannot pay fees — it may not exist or have zero balance on this network. Tip: disable simulation to build without a funded wallet.';
+    }
     if (error.includes('insufficient funds')) {
-      return 'Insufficient funds in the payer account';
+      return 'Insufficient funds in the payer account to cover this transaction.';
     }
     if (error.includes('invalid account')) {
-      return 'One or more accounts in the transaction are invalid';
+      return 'One or more accounts in the transaction are invalid.';
     }
     if (error.includes('custom program error: 0x1')) {
       return 'Insufficient lamports for rent exemption';
