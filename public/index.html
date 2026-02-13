@@ -491,18 +491,13 @@
                         />
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                        <label style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
-                            <input type="checkbox" id="simulate-toggle" style="opacity: 0; width: 0; height: 0;">
-                            <span style="position: absolute; inset: 0; background: #333; border-radius: 24px; transition: 0.3s;"></span>
-                            <span id="toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #666; border-radius: 50%; transition: 0.3s;"></span>
-                        </label>
-                        <span style="color: var(--text-secondary); font-size: 0.85rem;" id="simulate-label">Simulate transaction (requires funded wallet)</span>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; user-select: none;" onclick="toggleSimulation()">
+                        <div id="toggle-track" style="position: relative; width: 44px; height: 24px; background: #333; border-radius: 24px; transition: background 0.3s; flex-shrink: 0;">
+                            <div id="toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #666; border-radius: 50%; transition: all 0.3s;"></div>
+                        </div>
+                        <input type="hidden" id="simulate-toggle" value="off">
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;" id="simulate-label">Simulate transaction <span style="color: var(--text-muted);">(requires funded wallet)</span></span>
                     </div>
-                    <style>
-                        #simulate-toggle:checked + span { background: var(--accent); }
-                        #simulate-toggle:checked + span + span { left: 22px; background: #fff; }
-                    </style>
                     
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👆 Try an example prompt:</p>
                     <div class="examples-grid">
@@ -709,6 +704,23 @@
     </footer>
 
     <script>
+        // Simulation toggle
+        let simulationEnabled = false;
+        function toggleSimulation() {
+            simulationEnabled = !simulationEnabled;
+            const track = document.getElementById('toggle-track');
+            const knob = document.getElementById('toggle-knob');
+            if (simulationEnabled) {
+                track.style.background = '#00ff88';
+                knob.style.left = '22px';
+                knob.style.background = '#fff';
+            } else {
+                track.style.background = '#333';
+                knob.style.left = '2px';
+                knob.style.background = '#666';
+            }
+        }
+
         // Set example in the form and auto-build
         function setExample(text) {
             document.getElementById('prompt-input').value = text;
@@ -746,8 +758,7 @@
                 
                 // Add payer (use a demo address if empty)
                 requestBody.payer = payer || '11111111111111111111111111111111';
-                const simulateOn = document.getElementById('simulate-toggle').checked;
-                requestBody.skipSimulation = !simulateOn;
+                requestBody.skipSimulation = !simulationEnabled;
                 
                 const response = await fetch('/api/build/natural', {
                     method: 'POST',
