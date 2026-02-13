@@ -33,19 +33,26 @@ Content-Type: application/json
 
 The `transaction` field is a base64-encoded Solana transaction ready for wallet signing.
 
-### What You Can Say
+### Prompt Format Guide
 
-**Swaps** — SolForge resolves any token automatically:
-- `"Swap 5 SOL for BONK"`
-- `"Swap 2 SOL for Tesla AI token"` (resolves via DexScreener)
-- `"Convert 100 USDC to SOL with 0.5% slippage"`
-- `"Ape 1 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"` (mint address works too)
+**IMPORTANT:** Use these exact phrasings for best results. The parser uses regex patterns, not an LLM, so structure matters.
+
+**Swaps (use "swap X FROM for TO"):**
+- `"Swap 5 SOL for BONK"` ← best format
+- `"Swap 1 SOL for USDC with 0.5% slippage"`
+- `"Convert 100 USDC to SOL"`
+- `"Buy 5 BONK"` (shorthand — buys 5 SOL worth of BONK)
+- `"Buy USDC"` (defaults to 1 SOL worth)
+
+**With mint addresses (use "swap X SOL for MINT_ADDRESS"):**
+- `"Swap 2 SOL for DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"`
+- `"Ape 1 SOL into MINT_ADDRESS"`
 
 **Staking:**
 - `"Liquid stake 10 SOL with Marinade"`
 - `"Unstake 5 mSOL from Marinade"`
 
-**Transfers:**
+**Transfers (use "send AMOUNT TOKEN to ADDRESS"):**
 - `"Send 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"`
 - `"Send 100 USDC to ADDRESS"`
 
@@ -55,9 +62,16 @@ The `transaction` field is a base64-encoded Solana transaction ready for wallet 
 **Tips:**
 - `"Tip 0.01 SOL to Jito"`
 
-**Chained operations** (builds multiple in one call):
-- `"Swap 1 SOL for USDC and tip 0.01 SOL to Jito"` (Jito tip bundled into swap tx)
+**Chained operations (use "and" between operations):**
+- `"Swap 1 SOL for USDC and tip 0.01 SOL to Jito"`
 - `"Send 0.5 SOL to ADDRESS and write memo gm"`
+
+**⚠️ Patterns that WON'T work:**
+- `"Buy 5 BONK with SOL"` — use `"Swap 5 SOL for BONK"` instead
+- `"Purchase BONK tokens"` — use `"Buy BONK"` or `"Swap 1 SOL for BONK"`
+- `"I want to exchange my SOL for USDC"` — use `"Swap 1 SOL for USDC"`
+
+When in doubt, use the format: **"Swap [AMOUNT] [FROM_TOKEN] for [TO_TOKEN]"**
 
 ### Options
 | Parameter | Type | Required | Description |

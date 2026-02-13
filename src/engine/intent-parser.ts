@@ -737,7 +737,17 @@ export class IntentParser {
   }
 
   static async parseNaturalLanguageAsync(intent: NaturalLanguageIntent): Promise<ParsedIntent> {
-    const result = this._parseSync(intent);
+    let result: ParsedIntent;
+    try {
+      result = this._parseSync(intent);
+    } catch (parseError) {
+      // Regex failed — try LLM fallback before giving up
+      const llmResult = await IntentParser.tryLLMFallback(intent.prompt);
+      if (llmResult) {
+        return llmResult;
+      }
+      throw parseError;
+    }
 
     // Handle priority fee reparsing
     if (result.protocol === '__reparse__' && result.params.originalPrompt) {
@@ -887,7 +897,122 @@ export class IntentParser {
     }
 
     // No pattern matched
-    throw new Error(`Could not parse intent: "${intent.prompt}". Supported actions: swap, transfer, stake, memo, tip, create account`);
+    throw new Error(`Could not parse intent: "${intent.prompt}". Try: "Swap [amount] [token] for [token]", "Send [amount] SOL to [address]", "Write onchain memo: [message]", "Tip [amount] SOL to Jito", "Liquid stake [amount] SOL with Marinade"`);
+  }
+
+  /**
+   * LLM fallback: when regex patterns fail, use a lightweight LLM call to extract intent.
+   * Requires ANTHROPIC_API_KEY or OPENAI_API_KEY in environment.
+   */
+  private static async tryLLMFallback(prompt: string): Promise<ParsedIntent | null> {
+    const anthropicKey = process.env.ANTHROPIC_API_KEY;
+    const openaiKey = process.env.OPENAI_API_KEY;
+    
+    if (!anthropicKey && !openaiKey) return null;
+
+    try {
+      const systemPrompt = `You are a Solana transaction intent parser. Extract the user's intent from their message and return ONLY valid JSON (no markdown, no backticks).
+
+Return format:
+{"action":"swap|transfer|memo|stake|unstake|tip|buy|sell","params":{"amount":NUMBER,"from":"TOKEN","to":"TOKEN_OR_ADDRESS","message":"TEXT","slippage":NUMBER},"protocol":"jupiter|marinade|system|spl-token|memo|jito|__resolve__"}
+
+Rules:
+- For swaps/buys/sells: action="swap", params.from=source token, params.to=destination token, params.amount=number
+- If buying a token with SOL: from="SOL", to=token name/address
+- If selling a token: from=token, to="SOL"
+- For transfers: action="transfer", params.to=address, params.amount=number, params.token=token name
+- For memos: action="memo", params.message=the memo text
+- For staking: action="stake", params.amount=SOL amount, protocol="marinade"
+- For tips: action="tip", params.amount=SOL amount, protocol="jito"
+- Use token symbols (SOL, USDC, BONK) not full names
+- If no amount specified, default to 1
+- Return ONLY the JSON object, nothing else`;
+
+      let result: string | null = null;
+
+      if (anthropicKey) {
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-20250414',
+            max_tokens: 200,
+            messages: [{ role: 'user', content: prompt }],
+            system: systemPrompt,
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) {
+          const data = await response.json() as any;
+          result = data.content?.[0]?.text;
+        }
+      } else if (openaiKey) {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 200,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ],
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) {
+          const data = await response.json() as any;
+          result = data.choices?.[0]?.message?.content;
+        }
+      }
+
+      if (!result) return null;
+
+      // Parse the LLM response
+      const parsed = JSON.parse(result.trim());
+      
+      // Map to our ParsedIntent format
+      const action = parsed.action;
+      const protocol = parsed.protocol || '__resolve__';
+      let params: Record<string, any> = {};
+
+      if (action === 'swap' || action === 'buy' || action === 'sell') {
+        params = {
+          from: resolveMint(parsed.params.from || 'SOL'),
+          to: resolveMint(parsed.params.to || 'SOL'),
+          amount: parsed.params.amount || 1,
+          slippage: parsed.params.slippage,
+        };
+        return { protocol: protocol === '__resolve__' ? 'jupiter' : protocol, action: 'swap', params, confidence: 0.7 };
+      } else if (action === 'transfer') {
+        params = {
+          amount: parsed.params.amount || 1,
+          to: parsed.params.to,
+          token: parsed.params.token,
+        };
+        return { protocol: parsed.params.token?.toUpperCase() === 'SOL' ? 'system' : 'spl-token', action: 'transfer', params, confidence: 0.7 };
+      } else if (action === 'memo') {
+        return { protocol: 'memo', action: 'memo', params: { message: parsed.params.message || prompt }, confidence: 0.7 };
+      } else if (action === 'stake') {
+        return { protocol: 'marinade', action: 'stake', params: { amount: parsed.params.amount || 1 }, confidence: 0.7 };
+      } else if (action === 'unstake') {
+        return { protocol: 'marinade', action: 'unstake', params: { amount: parsed.params.amount || 1 }, confidence: 0.7 };
+      } else if (action === 'tip') {
+        return { protocol: 'jito', action: 'tip', params: { amount: parsed.params.amount || 0.001 }, confidence: 0.7 };
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('LLM fallback failed:', error instanceof Error ? error.message : error);
+      return null;
+    }
   }
 
   static getSupportedActions(): string[] {
