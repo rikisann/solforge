@@ -578,6 +578,9 @@ router.post('/api/execute/natural', async (req: Request, res: Response) => {
     const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action) ||
       resolvedIntent.includes('swap');
     
+    // Kamino/lending protocols build their own complete transactions via SDK (includes compute budget)
+    const isLendingProtocol = ['kamino', 'marginfi', 'solend'].includes(parsedIntent.protocol);
+    
     if (isSwapAction && finalParams.from && finalParams.to) {
       const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
       const jupiterIntent = {
@@ -590,6 +593,36 @@ router.post('/api/execute/natural', async (req: Request, res: Response) => {
         }
       };
       transactionBase64 = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
+    } else if (isLendingProtocol) {
+      // Lending protocols return instructions directly — build VersionedTransaction here
+      // This avoids TransactionBuilder adding a conflicting compute budget
+      const handler = ProtocolRegistry.getHandler(parsedIntent.protocol);
+      if (!handler) throw new Error(`No handler for protocol: ${parsedIntent.protocol}`);
+      const instructions = await handler.build(buildIntent);
+      
+      const lendingNetwork = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet';
+      const lendingConn = RPCConnection.getConnection(lendingNetwork as any);
+      const { blockhash } = await lendingConn.getLatestBlockhash('confirmed');
+      
+      // Build versioned transaction with lookup table if available
+      const lookupTables: AddressLookupTableAccount[] = [];
+      const lutAddresses = (buildIntent as any)._lookupTables;
+      if (lutAddresses && lutAddresses.length > 0) {
+        for (const lutAddr of lutAddresses) {
+          try {
+            const lutAccount = await lendingConn.getAddressLookupTable(new PublicKey(lutAddr));
+            if (lutAccount.value) lookupTables.push(lutAccount.value);
+          } catch (e) { /* skip failed LUT lookups */ }
+        }
+      }
+      
+      const messageV0 = new TransactionMessage({
+        payerKey: agentWallet.publicKey,
+        recentBlockhash: blockhash,
+        instructions,
+      }).compileToV0Message(lookupTables.length > 0 ? lookupTables : undefined);
+      const vtx = new VersionedTransaction(messageV0);
+      transactionBase64 = Buffer.from(vtx.serialize()).toString('base64');
     } else {
       const result = await TransactionBuilder.buildTransaction(buildIntent);
       if (!result.success || !result.transaction) {

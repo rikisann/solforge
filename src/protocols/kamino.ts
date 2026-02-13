@@ -85,7 +85,7 @@ export class KaminoProtocol implements ProtocolHandler {
       market, amountBN, tokenMint, owner, obligation,
       false, // useV2Ixs
       undefined, // scopeRefreshConfig
-      1_400_000, // extraComputeBudget
+      1_400_000, // extraComputeBudget (max)
       true, // includeAtaIxs
       false, // requestElevationGroup
       { skipInitialization: false, skipLutCreation: true },
