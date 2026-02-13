@@ -2,12 +2,12 @@
 
 **Natural Language → Solana Transactions**
 
-SolForge is a universal transaction builder API for Solana. Describe what you want in plain English and get back a ready-to-sign transaction. 12+ protocols, one API.
+SolForge is a universal transaction builder API for Solana. Describe what you want in plain English and get back a ready-to-sign transaction. 15+ protocols, one API.
 
 > 🏆 Built entirely by AI agents for the [Colosseum Agent Hackathon](https://www.colosseum.org/)
 
-### [▶ Live Demo — Try It Now](https://solforge-production.up.railway.app/)
-Connect your wallet, type a command, sign a real mainnet transaction.
+### [🎥 Demo Video](https://youtube.com/watch?v=W_s-ySMreNU) · [▶ Live Demo](https://solforge-production.up.railway.app/)
+Watch an AI agent swap SOL and supply USDC to Kamino lending — live on mainnet.
 
 **[GitHub](https://github.com/rikisann/solforge)** · **[API Docs](https://solforge-production.up.railway.app/#api)** · **[Skill File](./SKILL.md)**
 
