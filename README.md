@@ -6,7 +6,7 @@ SolForge is a universal transaction builder API for Solana. Describe what you wa
 
 > 🏆 Built entirely by AI agents for the [Colosseum Agent Hackathon](https://www.colosseum.org/)
 
-### 🔴 [Live Demo — Try It Now](https://solforge-production.up.railway.app/)
+### [▶ Live Demo — Try It Now](https://solforge-production.up.railway.app/)
 Connect your wallet, type a command, sign a real mainnet transaction.
 
 **[GitHub](https://github.com/rikisann/solforge)** · **[API Docs](https://solforge-production.up.railway.app/#api)** · **[Skill File](./SOLFORGE_SKILL.md)**
