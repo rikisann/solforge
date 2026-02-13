@@ -6,6 +6,8 @@ import { TransactionEstimator } from '../engine/estimator';
 import { TokenResolver } from '../engine/token-resolver';
 import { ProtocolRegistry } from '../protocols';
 import { BuildIntent, NaturalLanguageIntent, MultiBuildIntent, DecodeRequest, EstimateRequest } from '../utils/types';
+import { VersionedTransaction, TransactionMessage, SystemProgram, PublicKey, TransactionInstruction, AddressLookupTableAccount } from '@solana/web3.js';
+import { RPCConnection } from '../utils/connection';
 import { 
   validateBuildIntent, 
   validateNaturalIntent,
@@ -238,18 +240,99 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
         }
       }
       
-      // Handle non-swap intents (try to combine into one transaction if possible)
-      if (nonSwapIntents.length > 0) {
-        if (nonSwapIntents.length === 1) {
+      // Check for Jito tips that should be bundled INTO swap transactions
+      // Jito tips only work when in the same transaction as the swap (MEV protection)
+      const jitoTips = nonSwapIntents.filter(item => item.parsedIntent.protocol === 'jito');
+      const otherNonSwap = nonSwapIntents.filter(item => item.parsedIntent.protocol !== 'jito');
+      
+      if (jitoTips.length > 0 && jupiterSwaps.length > 0) {
+        // Inject Jito tip instructions into the last Jupiter swap transaction
+        const lastTxIdx = transactions.length - 1;
+        if (lastTxIdx >= 0 && transactions[lastTxIdx]) {
+          try {
+            const txBase64 = transactions[lastTxIdx].transaction;
+            const txBuffer = Buffer.from(txBase64, 'base64');
+            const versionedTx = VersionedTransaction.deserialize(txBuffer);
+            
+            // Build Jito tip instructions
+            const tipInstructions: TransactionInstruction[] = [];
+            for (const tipData of jitoTips) {
+              const tipAmount = Math.floor((tipData.parsedIntent.params.amount || 0.001) * 1e9);
+              // Jito tip accounts - pick one randomly
+              const jitoTipAccounts = [
+                '96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5',
+                'HFqU5x63VTqvQss8hp11i4bPo7SWXkQPSYrJKw7Krcab',
+                'Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY',
+                'ADaUMid9yfUC5Drf6YoR1zczB7CpMYzoSwqbiMDbfEra',
+                'DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh',
+                'ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt',
+                'DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL',
+                '3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT',
+              ];
+              const tipAccount = jitoTipAccounts[Math.floor(Math.random() * jitoTipAccounts.length)];
+              
+              tipInstructions.push(
+                SystemProgram.transfer({
+                  fromPubkey: new PublicKey(naturalIntent.payer),
+                  toPubkey: new PublicKey(tipAccount),
+                  lamports: tipAmount,
+                })
+              );
+            }
+            
+            // Resolve address lookup tables for decompilation
+            const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet';
+            const connection = RPCConnection.getConnection(network as any);
+            const lookupTableAccounts: AddressLookupTableAccount[] = [];
+            
+            if (versionedTx.message.addressTableLookups.length > 0) {
+              const lookupTableAddresses = versionedTx.message.addressTableLookups.map(l => l.accountKey);
+              const lookupResults = await connection.getMultipleAccountsInfo(lookupTableAddresses);
+              for (let i = 0; i < lookupTableAddresses.length; i++) {
+                const accountInfo = lookupResults[i];
+                if (accountInfo) {
+                  const lookupTable = new AddressLookupTableAccount({
+                    key: lookupTableAddresses[i],
+                    state: AddressLookupTableAccount.deserialize(accountInfo.data),
+                  });
+                  lookupTableAccounts.push(lookupTable);
+                }
+              }
+            }
+            
+            // Decompile, add tip instructions, recompile
+            const message = TransactionMessage.decompile(versionedTx.message, { addressLookupTableAccounts: lookupTableAccounts });
+            message.instructions.push(...tipInstructions);
+            versionedTx.message = message.compileToV0Message(lookupTableAccounts);
+            
+            // Re-serialize
+            transactions[lastTxIdx].transaction = Buffer.from(versionedTx.serialize()).toString('base64');
+            transactions[lastTxIdx].details.jitoTip = jitoTips.map(t => t.parsedIntent.params.amount).reduce((a: number, b: number) => a + b, 0);
+            transactions[lastTxIdx].details.note = (transactions[lastTxIdx].details.note || '') + 
+              ` Jito tip of ${transactions[lastTxIdx].details.jitoTip} SOL bundled into swap transaction.`;
+          } catch (jitoError) {
+            console.warn('Failed to inject Jito tip into swap transaction, building separately:', jitoError);
+            // Fall back to separate transaction
+            otherNonSwap.push(...jitoTips);
+          }
+        }
+      } else if (jitoTips.length > 0) {
+        // No swaps to bundle with — build Jito tips as regular transactions
+        otherNonSwap.push(...jitoTips);
+      }
+
+      // Handle remaining non-swap intents (try to combine into one transaction if possible)
+      if (otherNonSwap.length > 0) {
+        if (otherNonSwap.length === 1) {
           // Single non-swap intent
-          const result = await TransactionBuilder.buildTransaction(nonSwapIntents[0].buildIntent);
+          const result = await TransactionBuilder.buildTransaction(otherNonSwap[0].buildIntent);
           if (result.success && result.transaction) {
             transactions.push({
               transaction: result.transaction,
               details: {
                 ...result.details,
-                parsedIntent: nonSwapIntents[0].parsedIntent,
-                confidence: nonSwapIntents[0].parsedIntent.confidence
+                parsedIntent: otherNonSwap[0].parsedIntent,
+                confidence: otherNonSwap[0].parsedIntent.confidence
               },
               simulation: result.simulation
             });
@@ -257,7 +340,7 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
         } else {
           // Multiple non-swap intents - combine into one transaction
           const multiIntent = {
-            intents: nonSwapIntents.map(item => item.buildIntent),
+            intents: otherNonSwap.map(item => item.buildIntent),
             payer: naturalIntent.payer,
             network: naturalIntent.network,
             priorityFee: naturalIntent.priorityFee,
@@ -270,7 +353,7 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
               transaction: result.transaction,
               details: {
                 ...result.details,
-                parsedIntents: nonSwapIntents.map(item => item.parsedIntent)
+                parsedIntents: otherNonSwap.map(item => item.parsedIntent)
               },
               simulation: result.simulation
             });
