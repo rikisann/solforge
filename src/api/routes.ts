@@ -64,7 +64,8 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       payer: naturalIntent.payer,
       network: naturalIntent.network,
       priorityFee: naturalIntent.priorityFee,
-      computeBudget: naturalIntent.computeBudget
+      computeBudget: naturalIntent.computeBudget,
+      skipSimulation: (req.body as any).skipSimulation
     };
 
     // Special handling for Jupiter swaps (they return complete transactions)

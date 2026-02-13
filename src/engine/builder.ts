@@ -74,42 +74,45 @@ export class TransactionBuilder {
       transaction.recentBlockhash = blockhash;
       transaction.feePayer = payer;
 
-      // Simulate transaction
-      const simulation = await TransactionSimulator.simulateTransaction(
-        transaction,
-        payer,
-        network
-      );
-
-      if (!simulation.success) {
-        const humanReadableError = this.parseSimulationError(simulation.error || 'Simulation failed');
-        return {
-          success: false,
-          error: humanReadableError,
-          simulation
-        };
-      }
-
       // Serialize transaction
       const serializedTransaction = transaction.serialize({ 
         requireAllSignatures: false,
         verifySignatures: false
       }).toString('base64');
 
+      // Simulate transaction (unless skipped)
+      let simulation: any = null;
+      if (!intent.skipSimulation) {
+        simulation = await TransactionSimulator.simulateTransaction(
+          transaction,
+          payer,
+          network
+        );
+
+        if (!simulation.success) {
+          const humanReadableError = this.parseSimulationError(simulation.error || 'Simulation failed');
+          return {
+            success: false,
+            error: humanReadableError,
+            simulation
+          };
+        }
+      }
+
       // Gather transaction details
       const details = {
         protocol: handler.name,
         instructions: transaction.instructions.length,
         accounts: this.getUniqueAccounts(transaction.instructions),
-        estimatedFee: `${(simulation.unitsConsumed * (priorityFee / 1000000) / LAMPORTS_PER_SOL).toFixed(6)} SOL`,
-        computeUnits: simulation.unitsConsumed,
+        estimatedFee: simulation ? `${(simulation.unitsConsumed * (priorityFee / 1000000) / LAMPORTS_PER_SOL).toFixed(6)} SOL` : 'N/A (simulation skipped)',
+        computeUnits: simulation?.unitsConsumed ?? 0,
         priorityFee: priorityFee
       };
 
       return {
         success: true,
         transaction: serializedTransaction,
-        simulation,
+        ...(simulation && { simulation }),
         details
       };
 

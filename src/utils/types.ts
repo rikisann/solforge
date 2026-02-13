@@ -7,12 +7,14 @@ export interface BuildIntent {
   network?: 'mainnet' | 'devnet';
   priorityFee?: number;
   computeBudget?: number;
+  skipSimulation?: boolean;
 }
 
 export interface NaturalLanguageIntent {
   prompt: string;
   payer: string;
   network?: 'mainnet' | 'devnet';
+  skipSimulation?: boolean;
   priorityFee?: number;
   computeBudget?: number;
 }

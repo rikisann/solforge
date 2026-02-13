@@ -724,10 +724,9 @@
                     prompt: prompt
                 };
                 
-                // Add payer if provided
-                if (payer) {
-                    requestBody.payer = payer;
-                }
+                // Add payer (use a demo address if empty)
+                requestBody.payer = payer || '11111111111111111111111111111111';
+                requestBody.skipSimulation = true;
                 
                 const response = await fetch('/api/build/natural', {
                     method: 'POST',
