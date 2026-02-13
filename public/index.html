@@ -331,90 +331,652 @@
             <div class="text-center mb-12">
                 <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">API Reference</h2>
                 <p class="text-lg text-slate-300 max-w-2xl mx-auto">
-                    Powerful endpoints for every use case. From natural language to structured JSON, SolForge has you covered.
+                    Comprehensive API documentation with interactive examples. Click any endpoint to view details, parameters, and code samples.
                 </p>
             </div>
             
-            <div class="max-w-4xl mx-auto space-y-4">
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/build/natural</span>
+            <div class="max-w-6xl mx-auto space-y-4">
+                <!-- POST /api/build/natural -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold font-mono rounded">POST</span>
+                            <span class="font-mono text-slate-200">/api/build/natural</span>
+                            <span class="text-slate-400 text-sm">Transform natural language into transactions</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            The star endpoint of SolForge. Converts natural language prompts into executable Solana transactions with intelligent protocol detection and automatic token resolution.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">prompt</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Natural language description of the transaction</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">payer</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Wallet address that will pay for and sign the transaction</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">network</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Network to use (default: "mainnet")</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">skipSimulation</td>
+                                            <td class="py-2 text-slate-400">boolean</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Skip transaction simulation (faster response)</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">priorityFee</td>
+                                            <td class="py-2 text-slate-400">number</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Priority fee in lamports</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">computeBudget</td>
+                                            <td class="py-2 text-slate-400">number</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Compute budget limit</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/build/natural \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Swap 1 SOL for USDC",
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'</pre>
+                            </div>
+                        </div>
+
+                        <!-- Example Response -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Response</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">{
+  "success": true,
+  "transaction": "base64_encoded_transaction_data...",
+  "details": {
+    "protocol": "jupiter",
+    "parsedIntent": {
+      "action": "swap",
+      "protocol": "jupiter",
+      "params": {
+        "from": "So11111111111111111111111111111111111111112",
+        "to": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "amount": 1.0
+      }
+    },
+    "confidence": 0.95
+  }
+}</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Transform natural language descriptions into executable Solana transactions with intelligent protocol detection.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/build</span>
+                </details>
+
+                <!-- POST /api/build -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold font-mono rounded">POST</span>
+                            <span class="font-mono text-slate-200">/api/build</span>
+                            <span class="text-slate-400 text-sm">Structured intent builder for programmatic use</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Build transactions from structured intent objects when you know the exact protocol and parameters. Perfect for programmatic integrations and when you need precise control.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">intent</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Intent name (e.g. "swap", "memo", "transfer", "marinade-stake")</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">params</td>
+                                            <td class="py-2 text-slate-400">object</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Intent-specific parameters</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">payer</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Wallet address that will pay for the transaction</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">network</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Network to use (default: "mainnet")</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">skipSimulation</td>
+                                            <td class="py-2 text-slate-400">boolean</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Skip transaction simulation</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/build \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": "memo",
+    "params": {
+      "message": "gm"
+    },
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Build transactions from structured intent objects with precise control over parameters and execution flow.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/build/multi</span>
+                </details>
+
+                <!-- POST /api/build/multi -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold font-mono rounded">POST</span>
+                            <span class="font-mono text-slate-200">/api/build/multi</span>
+                            <span class="text-slate-400 text-sm">Batch multiple intents into one atomic transaction</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Combine multiple operations into one atomic transaction. Perfect for complex workflows like "swap and stake" or batch operations that must succeed or fail together.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">intents</td>
+                                            <td class="py-2 text-slate-400">BuildIntent[]</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Array of BuildIntent objects</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">payer</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Wallet address that will pay for the transaction</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">network</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-slate-500">No</td>
+                                            <td class="py-2 text-slate-300">Network to use (default: "mainnet")</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/build/multi \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intents": [
+      {
+        "intent": "memo",
+        "params": {"message": "batch tx"}
+      },
+      {
+        "intent": "transfer",
+        "params": {"to": "ADDRESS...", "amount": 0.01}
+      }
+    ],
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Combine multiple operations into one atomic transaction for complex workflows and batch operations.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/decode</span>
+                </details>
+
+                <!-- POST /api/decode -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold font-mono rounded">POST</span>
+                            <span class="font-mono text-slate-200">/api/decode</span>
+                            <span class="text-slate-400 text-sm">Decode base64 transaction into human-readable format</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Decode any Solana transaction from its base64 encoded format into a human-readable structure. Useful for analyzing transactions before signing or understanding their effects.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">transaction</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Base64 encoded transaction data</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/decode \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction": "AQAAAA..."
+  }'</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Decode and analyze any Solana transaction to understand its structure, purpose, and estimated impact.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/estimate</span>
+                </details>
+
+                <!-- POST /api/estimate -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold font-mono rounded">POST</span>
+                            <span class="font-mono text-slate-200">/api/estimate</span>
+                            <span class="text-slate-400 text-sm">Estimate fees and costs before building</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Estimate transaction costs including fees, rent, and compute units before actually building the transaction. Helps users understand costs upfront.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">intent</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Intent name to estimate</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">params</td>
+                                            <td class="py-2 text-slate-400">object</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Intent parameters</td>
+                                        </tr>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">payer</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Payer wallet address</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/estimate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": "swap",
+    "params": {"from": "SOL", "to": "USDC", "amount": 1},
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Estimate transaction costs including fees, rent, and compute units before building or executing.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/resolve</span>
+                </details>
+
+                <!-- GET /api/resolve -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono rounded">GET</span>
+                            <span class="font-mono text-slate-200">/api/resolve</span>
+                            <span class="text-slate-400 text-sm">Look up token/pair info via DexScreener</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Look up token or trading pair information using DexScreener integration. Returns token metadata, pricing, liquidity, and primary DEX information.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Query Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">query</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Token address, pair address, or symbol</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl "https://api.solforge.dev/api/resolve?query=BONK"
+
+# Or with token address:
+curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"</pre>
+                            </div>
+                        </div>
+
+                        <!-- Example Response -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Response</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">{
+  "success": true,
+  "type": "token",
+  "result": {
+    "symbol": "BONK",
+    "name": "Bonk",
+    "address": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "primaryDex": "jupiter",
+    "liquidity": 12500000,
+    "price": 0.000023
+  }
+}</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Resolve token addresses, trading pairs, and protocol information using DexScreener integration.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/protocols</span>
+                </details>
+
+                <!-- GET /api/protocols -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono rounded">GET</span>
+                            <span class="font-mono text-slate-200">/api/protocols</span>
+                            <span class="text-slate-400 text-sm">List all supported protocols</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Get a complete list of all supported protocols with their capabilities, supported intents, and status information.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <p class="text-slate-400 text-sm">No parameters required.</p>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl "https://api.solforge.dev/api/protocols"</pre>
+                            </div>
+                        </div>
+
+                        <!-- Example Response -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Response</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">{
+  "success": true,
+  "protocols": [
+    {
+      "name": "jupiter",
+      "description": "Jupiter DEX aggregator for optimal swaps",
+      "supportedIntents": ["swap"],
+      "status": "active"
+    },
+    {
+      "name": "marinade",
+      "description": "Liquid staking protocol",
+      "supportedIntents": ["marinade-stake", "marinade-unstake"],
+      "status": "active"
+    }
+  ],
+  "count": 12
+}</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        List all supported protocols with their current status, capabilities, and supported operations.
-                    </p>
-                </div>
-                
-                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
-                    <div class="flex flex-wrap items-center mb-3">
-                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
-                        <span class="font-mono text-slate-200 text-sm">/api/docs</span>
+                </details>
+
+                <!-- GET /api/protocols/:name/schema -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono rounded">GET</span>
+                            <span class="font-mono text-slate-200">/api/protocols/:name/schema</span>
+                            <span class="text-slate-400 text-sm">Get parameter schema for a protocol</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Get the complete parameter schema for a specific protocol, including required/optional fields, types, and examples for each supported intent.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Path Parameters</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-slate-700">
+                                            <th class="text-left py-2 text-slate-300 font-medium">Name</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Type</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Required</th>
+                                            <th class="text-left py-2 text-slate-300 font-medium">Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b border-slate-700/50">
+                                            <td class="py-2 text-emerald-400 font-mono">name</td>
+                                            <td class="py-2 text-slate-400">string</td>
+                                            <td class="py-2 text-amber-400">Yes</td>
+                                            <td class="py-2 text-slate-300">Protocol name (e.g. "jupiter", "marinade")</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl "https://api.solforge.dev/api/protocols/jupiter/schema"</pre>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-slate-300 text-sm">
-                        Access complete API documentation with examples, integration guides, and best practices.
-                    </p>
-                </div>
+                </details>
+
+                <!-- GET /api/docs -->
+                <details class="group bg-slate-900 border border-slate-700 rounded-xl overflow-hidden">
+                    <summary class="flex items-center justify-between p-5 cursor-pointer hover:bg-slate-800/50 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono rounded">GET</span>
+                            <span class="font-mono text-slate-200">/api/docs</span>
+                            <span class="text-slate-400 text-sm">Full API documentation in JSON format</span>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="px-5 pb-5 border-t border-slate-700/50 pt-4 space-y-4">
+                        <p class="text-slate-300">
+                            Get comprehensive API documentation in machine-readable JSON format. Includes all protocols, schemas, examples, and integration guides.
+                        </p>
+                        
+                        <!-- Parameters Table -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Parameters</h4>
+                            <p class="text-slate-400 text-sm">No parameters required.</p>
+                        </div>
+
+                        <!-- Example Request -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Request</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">curl "https://api.solforge.dev/api/docs"</pre>
+                            </div>
+                        </div>
+
+                        <!-- Example Response -->
+                        <div class="space-y-2">
+                            <h4 class="text-slate-200 font-semibold">Example Response</h4>
+                            <div class="relative">
+                                <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">{
+  "success": true,
+  "version": "1.0.0",
+  "title": "SolForge API Documentation",
+  "description": "Universal Solana transaction builder API",
+  "protocols": {
+    "jupiter": {
+      "name": "jupiter",
+      "description": "DEX aggregator for optimal swaps",
+      "schema": {...},
+      "examples": {...}
+    }
+  },
+  "usage": {
+    "structured": "/api/build",
+    "natural": "/api/build/natural",
+    "protocolInfo": "/api/protocols/:name"
+  }
+}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </section>
