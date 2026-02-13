@@ -13,9 +13,10 @@ interface ParsePattern {
 
 export class IntentParser {
   private static patterns: ParsePattern[] = [
-    // Lending patterns - Kamino
+    // Enhanced Lending patterns - Kamino with comprehensive variations
+    // Supply patterns for Kamino
     {
-      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on)\s+kamino/i,
+      pattern: /(?:supply|deposit|lend|put|add|provide|invest|stake|lock(?:\s+up)?)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:kamino|klend)(?:\s+(?:finance|lending))?/i,
       protocol: 'kamino',
       action: 'supply',
       extractor: (match) => ({
@@ -23,8 +24,19 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Kamino with "my" variations
     {
-      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+kamino/i,
+      pattern: /(?:deposit|put|add|provide|invest|stake|lock(?:\s+up)?)\s+(?:my\s+)?(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Borrow patterns for Kamino
+    {
+      pattern: /(?:borrow|take\s+a\s+loan\s+of|loan\s+me|get\s+a\s+loan\s+of|take\s+out)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+(?:kamino|klend)/i,
       protocol: 'kamino',
       action: 'borrow',
       extractor: (match) => ({
@@ -32,8 +44,26 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Generic borrow against collateral for Kamino
     {
-      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+kamino/i,
+      pattern: /borrow\s+against\s+(?:my\s+)?collateral\s+(?:on|from)\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'borrow',
+      extractor: () => ({})
+    },
+    // Original basic borrow pattern for Kamino
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Repay patterns for Kamino
+    {
+      pattern: /(?:repay|pay\s+back|pay\s+off|settle|return)\s+(\d+(?:\.\d+)?)\s+(\w+)(?:\s+debt)?\s+(?:on|to)\s+(?:kamino|klend)/i,
       protocol: 'kamino',
       action: 'repay',
       extractor: (match) => ({
@@ -41,8 +71,22 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Loan-specific repay patterns for Kamino
     {
-      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+kamino/i,
+      pattern: /(?:repay|pay\s+back)\s+(?:my\s+)?(?:kamino|klend)\s+loan/i,
+      protocol: 'kamino',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+my\s+loan\s+(?:on|from)\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    // Withdraw patterns for Kamino
+    {
+      pattern: /(?:withdraw|pull\s+out|remove|take\s+out|pull)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+(?:kamino|klend)/i,
       protocol: 'kamino',
       action: 'withdraw',
       extractor: (match) => ({
@@ -50,9 +94,26 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
-    // Lending patterns - Marginfi
+    // Withdraw with "my" patterns for Kamino
     {
-      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into)\s+marginfi/i,
+      pattern: /(?:withdraw|take\s+out|get)\s+my\s+(\w+)(?:\s+back)?\s+from\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'withdraw',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:withdraw|take\s+out|get\s+(?:my\s+)?\w+\s+back)\s+(?:my\s+)?collateral\s+from\s+(?:kamino|klend)/i,
+      protocol: 'kamino',
+      action: 'withdraw',
+      extractor: () => ({})
+    },
+
+    // Enhanced Lending patterns - Marginfi with comprehensive variations
+    // Supply patterns for Marginfi
+    {
+      pattern: /(?:supply|deposit|lend|put|add|provide|invest|lock(?:\s+up)?)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
       protocol: 'marginfi',
       action: 'supply',
       extractor: (match) => ({
@@ -60,8 +121,19 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Marginfi with "my" variations
     {
-      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+marginfi/i,
+      pattern: /(?:deposit|put|add|provide|invest|lock(?:\s+up)?)\s+(?:my\s+)?(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Borrow patterns for Marginfi
+    {
+      pattern: /(?:borrow|take\s+a\s+loan\s+of|loan\s+me|get\s+a\s+loan\s+of|take\s+out)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
       protocol: 'marginfi',
       action: 'borrow',
       extractor: (match) => ({
@@ -69,8 +141,26 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Generic borrow against collateral for Marginfi
     {
-      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+marginfi/i,
+      pattern: /borrow\s+against\s+(?:my\s+)?collateral\s+(?:on|from)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'borrow',
+      extractor: () => ({})
+    },
+    // Original basic borrow pattern for Marginfi
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Repay patterns for Marginfi
+    {
+      pattern: /(?:repay|pay\s+back|pay\s+off|settle|return)\s+(\d+(?:\.\d+)?)\s+(\w+)(?:\s+debt)?\s+(?:on|to)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
       protocol: 'marginfi',
       action: 'repay',
       extractor: (match) => ({
@@ -78,8 +168,22 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Loan-specific repay patterns for Marginfi
     {
-      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+marginfi/i,
+      pattern: /(?:repay|pay\s+back)\s+(?:my\s+)?(?:marginfi|margin\s+fi|mrgnlend)\s+loan/i,
+      protocol: 'marginfi',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+my\s+loan\s+(?:on|from)\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    // Withdraw patterns for Marginfi
+    {
+      pattern: /(?:withdraw|pull\s+out|remove|take\s+out|pull)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
       protocol: 'marginfi',
       action: 'withdraw',
       extractor: (match) => ({
@@ -87,9 +191,26 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
-    // Lending patterns - Solend
+    // Withdraw with "my" patterns for Marginfi
     {
-      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on)\s+solend/i,
+      pattern: /(?:withdraw|take\s+out|get)\s+my\s+(\w+)(?:\s+back)?\s+from\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'withdraw',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:withdraw|take\s+out|get\s+(?:my\s+)?\w+\s+back)\s+(?:my\s+)?collateral\s+from\s+(?:marginfi|margin\s+fi|mrgnlend)/i,
+      protocol: 'marginfi',
+      action: 'withdraw',
+      extractor: () => ({})
+    },
+
+    // Enhanced Lending patterns - Solend with comprehensive variations
+    // Supply patterns for Solend (case-insensitive with alternatives)
+    {
+      pattern: /(?:supply|deposit|lend|put|add|provide|invest)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:solend|SOLEND)(?:\s+lending)?/i,
       protocol: 'solend',
       action: 'supply',
       extractor: (match) => ({
@@ -97,6 +218,27 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Solend with "my" variations
+    {
+      pattern: /(?:deposit|put|add|provide|invest)\s+(?:my\s+)?(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into|in)\s+(?:solend|SOLEND)/i,
+      protocol: 'solend',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Borrow patterns for Solend
+    {
+      pattern: /(?:borrow|take\s+a\s+loan\s+of|loan\s+me|get\s+a\s+loan\s+of|take\s+out)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+solend/i,
+      protocol: 'solend',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Original basic borrow pattern for Solend
     {
       pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+solend/i,
       protocol: 'solend',
@@ -106,8 +248,9 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Repay patterns for Solend
     {
-      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+solend/i,
+      pattern: /(?:repay|pay\s+back|pay\s+off|settle|return)\s+(\d+(?:\.\d+)?)\s+(\w+)(?:\s+debt)?\s+(?:on|to)\s+solend/i,
       protocol: 'solend',
       action: 'repay',
       extractor: (match) => ({
@@ -115,8 +258,22 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
+    // Loan-specific repay patterns for Solend
     {
-      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+solend/i,
+      pattern: /(?:repay|pay\s+back)\s+(?:my\s+)?solend\s+loan/i,
+      protocol: 'solend',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+my\s+loan\s+(?:on|from)\s+solend/i,
+      protocol: 'solend',
+      action: 'repay',
+      extractor: () => ({})
+    },
+    // Withdraw patterns for Solend
+    {
+      pattern: /(?:withdraw|pull\s+out|remove|take\s+out|pull)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+solend/i,
       protocol: 'solend',
       action: 'withdraw',
       extractor: (match) => ({
@@ -124,11 +281,53 @@ export class IntentParser {
         token: match[2].toUpperCase()
       })
     },
-    // Generic lending patterns (default to Kamino)
+    // Withdraw with "my" patterns for Solend
     {
-      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)/i,
+      pattern: /(?:withdraw|take\s+out|get)\s+my\s+(\w+)(?:\s+back)?\s+from\s+solend/i,
+      protocol: 'solend',
+      action: 'withdraw',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:withdraw|take\s+out|get\s+(?:my\s+)?\w+\s+back)\s+(?:my\s+)?collateral\s+from\s+solend/i,
+      protocol: 'solend',
+      action: 'withdraw',
+      extractor: () => ({})
+    },
+    // Generic lending patterns (default to Kamino when no protocol specified)
+    {
+      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)$/i,
       protocol: 'kamino',
       action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)$/i,
+      protocol: 'kamino',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)$/i,
+      protocol: 'kamino',
+      action: 'repay',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)$/i,
+      protocol: 'kamino',
+      action: 'withdraw',
       extractor: (match) => ({
         amount: parseFloat(match[1]),
         token: match[2].toUpperCase()
@@ -1081,15 +1280,15 @@ export class IntentParser {
     // Define conjunctions and separators that indicate multiple intents
     const separators = [
       // " and " followed by a verb
-      /\s+and\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay)\s+/gi,
-      // " then "
-      /\s+then\s+/gi,
-      // " also "
-      /\s+also\s+/gi,
+      /\s+and\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay|put|invest|lock|take\s+a\s+loan|loan\s+me|get\s+a\s+loan|take\s+out|pay\s+back|pay\s+off|settle|return|pull\s+out|remove)\s+/gi,
+      // " then " followed by a verb (enhanced to capture the verb properly)
+      /\s+then\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay|put|invest|lock|take\s+a\s+loan|loan\s+me|get\s+a\s+loan|take\s+out|pay\s+back|pay\s+off|settle|return|pull\s+out|remove)\s+/gi,
+      // " also " followed by a verb
+      /\s+also\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay|put|invest|lock|take\s+a\s+loan|loan\s+me|get\s+a\s+loan|take\s+out|pay\s+back|pay\s+off|settle|return|pull\s+out|remove)\s+/gi,
       // " + "
       /\s+\+\s+/gi,
       // ", " followed by a verb (comma + space + verb)
-      /,\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay)\s+/gi
+      /,\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay|put|invest|lock|take\s+a\s+loan|loan\s+me|get\s+a\s+loan|take\s+out|pay\s+back|pay\s+off|settle|return|pull\s+out|remove)\s+/gi
     ];
 
     let segments = [prompt];
@@ -1099,21 +1298,33 @@ export class IntentParser {
       const newSegments: string[] = [];
       
       for (const segment of segments) {
-        const parts = segment.split(separator);
-        if (parts.length > 1) {
-          // Found a separator, split this segment
-          for (let i = 0; i < parts.length; i++) {
-            if (i === 0) {
-              newSegments.push(parts[i].trim());
-            } else {
-              // Re-add the verb that was consumed by the regex split
-              const match = segment.match(separator);
-              if (match) {
-                const verb = match[0].trim().replace(/^(and|then|also|\+|,)\s+/i, '');
-                newSegments.push((verb + ' ' + parts[i]).trim());
-              } else {
-                newSegments.push(parts[i].trim());
-              }
+        // Use a more careful splitting approach
+        const matches = [...segment.matchAll(separator)];
+        if (matches.length > 0) {
+          let lastIndex = 0;
+          
+          // Add the first segment (before first match)
+          if (matches[0].index! > 0) {
+            newSegments.push(segment.slice(0, matches[0].index).trim());
+          }
+          
+          // Process each match
+          for (let i = 0; i < matches.length; i++) {
+            const match = matches[i];
+            const matchStart = match.index!;
+            const matchEnd = matchStart + match[0].length;
+            
+            // Extract the verb from the match
+            const verb = match[1] || match[0].trim().replace(/^(and|then|also|\+|,)\s+/i, '');
+            
+            // Start of next segment
+            let segmentStart = matchEnd;
+            let segmentEnd = (i < matches.length - 1) ? matches[i + 1].index! : segment.length;
+            
+            // Create the new segment with the verb
+            if (segmentEnd > segmentStart) {
+              const nextSegmentText = segment.slice(segmentStart, segmentEnd).trim();
+              newSegments.push((verb + ' ' + nextSegmentText).trim());
             }
           }
         } else {
