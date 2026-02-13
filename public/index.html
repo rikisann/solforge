@@ -916,6 +916,16 @@
                     }
                 }
 
+                // Refresh blockhash before signing (server-built tx may have stale blockhash)
+                signBtn.textContent = 'Refreshing blockhash...';
+                const conn = getConnection();
+                const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash('confirmed');
+                if (isVersioned) {
+                    transaction.message.recentBlockhash = blockhash;
+                } else {
+                    transaction.recentBlockhash = blockhash;
+                }
+
                 // Sign transaction
                 signBtn.textContent = 'Waiting for signature...';
                 const signedTransaction = await walletProvider.signTransaction(transaction);
