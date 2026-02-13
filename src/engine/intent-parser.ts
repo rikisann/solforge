@@ -1,6 +1,8 @@
 import { NaturalLanguageIntent, ParsedIntent } from '../utils/types';
 import { resolveMint } from '../utils/connection';
 import { TokenResolver } from './token-resolver';
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface ParsePattern {
   pattern: RegExp;
@@ -446,6 +448,155 @@ export class IntentParser {
         slippage: match[4] ? parseFloat(match[4]) : 0.5
       })
     },
+    // "exchange 5 SOL into BONK"
+    {
+      pattern: /exchange\s+(\d+(?:\.\d+)?)\s+(\w+)\s+into\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // "buy some BONK" / "purchase BONK" / "get me BONK"
+    {
+      pattern: /(?:buy\s+some|purchase|get\s+me)\s+(\w+)/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: 1,
+        token: match[1].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "buy BONK with 5 SOL"
+    {
+      pattern: /buy\s+(\w+)\s+with\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        token: match[1].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "get me 2 SOL of USDC"
+    {
+      pattern: /get\s+me\s+(\d+(?:\.\d+)?)\s+sol\s+of\s+(\w+)/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "sell my BONK" (without "for sol")
+    {
+      pattern: /sell\s+my\s+(\w+)/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1,
+        token: match[1].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "ape into BONK" (no amount)
+    {
+      pattern: /ape\s+into\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: 1,
+        token: match[1],
+        slippage: undefined
+      })
+    },
+    // "yolo X SOL into TOKEN"
+    {
+      pattern: /yolo\s+(\d+(?:\.\d+)?)\s+sol\s+into\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "long BONK with 2 SOL" (buy)
+    {
+      pattern: /long\s+(\w+)\s+with\s+(\d+(?:\.\d+)?)\s+sol/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        token: match[1].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "short BONK" (sell)
+    {
+      pattern: /short\s+(\w+)/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1,
+        token: match[1].toUpperCase(),
+        slippage: undefined
+      })
+    },
+    // "pay ADDRESS X SOL/TOKEN"
+    {
+      pattern: /pay\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(\d+(?:\.\d+)?)\s+(\w+)/i,
+      protocol: 'spl-token',
+      action: 'transfer',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        to: match[1],
+        token: match[3].toUpperCase()
+      })
+    },
+    // "send ADDRESS X TOKEN" (address before amount)
+    {
+      pattern: /(?:send|transfer)\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(\d+(?:\.\d+)?)\s+(\w+)/i,
+      protocol: 'spl-token',
+      action: 'transfer',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        to: match[1],
+        token: match[3].toUpperCase()
+      })
+    },
+    // "withdraw stake" (generic unstake)
+    {
+      pattern: /withdraw\s+stake/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: () => ({
+        token: 'MSOL'
+      })
+    },
+    // "tip jito 0.01 SOL"
+    {
+      pattern: /tip\s+jito\s+(\d+(?:\.\d+)?)\s*(?:sol)?/i,
+      protocol: 'jito',
+      action: 'tip',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    // "send jito tip" (default small tip)
+    {
+      pattern: /send\s+jito\s+tip/i,
+      protocol: 'jito',
+      action: 'tip',
+      extractor: () => ({
+        amount: 0.001
+      })
+    },
     // Buy/sell tokens by symbol: "buy 1 sol of BONK"
     {
       pattern: /buy\s+(\d+(?:\.\d+)?)\s+sol\s+of\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
@@ -741,9 +892,17 @@ export class IntentParser {
     try {
       result = this._parseSync(intent);
     } catch (parseError) {
-      // Regex failed — try LLM fallback before giving up
+      // Regex failed — try learned patterns first, then LLM fallback
+      const learnedResult = IntentParser.tryLearnedPatterns(intent.prompt);
+      if (learnedResult) {
+        console.log(`[intent-parser] Matched learned pattern for: "${intent.prompt}"`);
+        return learnedResult;
+      }
+      
       const llmResult = await IntentParser.tryLLMFallback(intent.prompt);
       if (llmResult) {
+        // Learn from this success — save for future regex-free matching
+        IntentParser.saveLearnedPattern(intent.prompt, llmResult);
         return llmResult;
       }
       throw parseError;
@@ -898,6 +1057,107 @@ export class IntentParser {
 
     // No pattern matched
     throw new Error(`Could not parse intent: "${intent.prompt}". Try: "Swap [amount] [token] for [token]", "Send [amount] SOL to [address]", "Write onchain memo: [message]", "Tip [amount] SOL to Jito", "Liquid stake [amount] SOL with Marinade"`);
+  }
+
+  // --- Learned Patterns (self-healing parser) ---
+  
+  private static learnedPatternsPath = path.join(process.cwd(), 'data', 'learned-intents.json');
+  private static learnedPatterns: Array<{ prompt: string; normalized: string; result: ParsedIntent }> = [];
+  private static learnedLoaded = false;
+
+  /**
+   * Load learned patterns from disk (lazy, once).
+   */
+  private static loadLearnedPatterns(): void {
+    if (this.learnedLoaded) return;
+    this.learnedLoaded = true;
+    try {
+      if (fs.existsSync(this.learnedPatternsPath)) {
+        const data = JSON.parse(fs.readFileSync(this.learnedPatternsPath, 'utf-8'));
+        this.learnedPatterns = Array.isArray(data) ? data : [];
+        console.log(`[intent-parser] Loaded ${this.learnedPatterns.length} learned patterns`);
+      }
+    } catch (e) {
+      console.warn('[intent-parser] Failed to load learned patterns:', e);
+    }
+  }
+
+  /**
+   * Normalize a prompt for fuzzy matching: lowercase, collapse whitespace, strip punctuation.
+   */
+  private static normalize(prompt: string): string {
+    return prompt.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Try to match against previously learned patterns.
+   * Uses normalized string matching — extracts numbers/tokens and maps them.
+   */
+  private static tryLearnedPatterns(prompt: string): ParsedIntent | null {
+    this.loadLearnedPatterns();
+    if (this.learnedPatterns.length === 0) return null;
+
+    const norm = this.normalize(prompt);
+    
+    for (const learned of this.learnedPatterns) {
+      // Exact normalized match
+      if (learned.normalized === norm) {
+        return { ...learned.result, confidence: 0.8 };
+      }
+      
+      // Template match: replace numbers and known tokens with placeholders, compare structure
+      const templateNorm = norm.replace(/\d+(?:\.\d+)?/g, '__NUM__').replace(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, '__ADDR__');
+      const templateLearned = learned.normalized.replace(/\d+(?:\.\d+)?/g, '__NUM__').replace(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g, '__ADDR__');
+      
+      if (templateNorm === templateLearned) {
+        // Same structure, different values — extract new values and map them
+        const nums = norm.match(/\d+(?:\.\d+)?/g) || [];
+        const result = { ...learned.result, params: { ...learned.result.params }, confidence: 0.75 };
+        
+        // Replace amount with new number if present
+        if (nums.length > 0 && result.params.amount !== undefined && nums[0]) {
+          result.params.amount = parseFloat(nums[0]);
+        }
+        
+        // Extract token names from prompt for swaps
+        if (result.params.from && result.params.to) {
+          const words = prompt.match(/\b[A-Za-z]{2,10}\b/g) || [];
+          const tokens = words.filter(w => !['swap', 'for', 'to', 'into', 'from', 'with', 'and', 'the', 'sol', 'buy', 'sell', 'trade', 'exchange', 'convert', 'slippage'].includes(w.toLowerCase()));
+          // Don't remap — too risky. Just use amount replacement.
+        }
+        
+        return result;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Save a successfully LLM-parsed pattern for future use.
+   */
+  private static saveLearnedPattern(prompt: string, result: ParsedIntent): void {
+    try {
+      this.loadLearnedPatterns();
+      
+      const normalized = this.normalize(prompt);
+      
+      // Don't save duplicates
+      if (this.learnedPatterns.some(p => p.normalized === normalized)) return;
+      
+      this.learnedPatterns.push({ prompt, normalized, result });
+      
+      // Ensure data directory exists
+      const dir = path.dirname(this.learnedPatternsPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      
+      fs.writeFileSync(this.learnedPatternsPath, JSON.stringify(this.learnedPatterns, null, 2));
+      console.log(`[intent-parser] Learned new pattern: "${prompt}" → ${result.action} (${this.learnedPatterns.length} total)`);
+    } catch (e) {
+      console.warn('[intent-parser] Failed to save learned pattern:', e);
+    }
   }
 
   /**
