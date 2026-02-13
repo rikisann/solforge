@@ -39,6 +39,16 @@ Your AI agent instantly gets these tools:
 
 No REST API calls, no HTTP overhead — direct tool integration via stdio.
 
+### Quick Start: Skill File (No Setup Required)
+
+Don't want to set up MCP? Just copy [`SOLFORGE_SKILL.md`](./SOLFORGE_SKILL.md) into any AI chat (Claude, GPT, etc.) and it instantly knows how to use SolForge's REST API. Zero config, works with any LLM.
+
+| Integration | Setup | Best For |
+|-------------|-------|----------|
+| **MCP Server** | Install + config | Deep integration, native tool calls, best UX |
+| **Skill File** | Copy-paste | Quick start, any LLM, REST API |
+| **REST API** | None | Bots, scripts, any language |
+
 ---
 
 ## Why SolForge?
