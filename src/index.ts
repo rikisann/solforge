@@ -23,7 +23,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
       fontSrc: ["'self'", "https:", "data:"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.mainnet-beta.solana.com", "https://lite-api.jup.ag", "https://api.dexscreener.com", "https://api.jup.ag", "wss://api.mainnet-beta.solana.com"],
+      connectSrc: ["'self'", "https://api.mainnet-beta.solana.com", "https://mainnet.helius-rpc.com", "https://lite-api.jup.ag", "https://api.dexscreener.com", "https://api.jup.ag", "wss://api.mainnet-beta.solana.com", "wss://mainnet.helius-rpc.com"],
     }
   }
 }));
