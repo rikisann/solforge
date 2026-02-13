@@ -897,14 +897,14 @@
                 let isVersioned = false;
                 
                 try {
-                    const transactionBuffer = Buffer.from(transactionBase64, 'base64');
+                    const binaryString = atob(transactionBase64); const transactionBuffer = new Uint8Array(binaryString.length); for (let i = 0; i < binaryString.length; i++) { transactionBuffer[i] = binaryString.charCodeAt(i); }
                     transaction = solanaWeb3.VersionedTransaction.deserialize(transactionBuffer);
                     isVersioned = true;
                     console.log('Deserialized as VersionedTransaction');
                 } catch (versionedError) {
                     console.log('Failed to deserialize as VersionedTransaction, trying legacy:', versionedError.message);
                     try {
-                        const transactionBuffer = Buffer.from(transactionBase64, 'base64');
+                        const binaryString = atob(transactionBase64); const transactionBuffer = new Uint8Array(binaryString.length); for (let i = 0; i < binaryString.length; i++) { transactionBuffer[i] = binaryString.charCodeAt(i); }
                         transaction = solanaWeb3.Transaction.from(transactionBuffer);
                         isVersioned = false;
                         console.log('Deserialized as legacy Transaction');
