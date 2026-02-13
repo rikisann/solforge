@@ -490,6 +490,19 @@
                             placeholder="Your wallet address (optional - uses default if empty)"
                         />
                     </div>
+
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <label style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                            <input type="checkbox" id="simulate-toggle" style="opacity: 0; width: 0; height: 0;">
+                            <span style="position: absolute; inset: 0; background: #333; border-radius: 24px; transition: 0.3s;"></span>
+                            <span id="toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #666; border-radius: 50%; transition: 0.3s;"></span>
+                        </label>
+                        <span style="color: var(--text-secondary); font-size: 0.85rem;" id="simulate-label">Simulate transaction (requires funded wallet)</span>
+                    </div>
+                    <style>
+                        #simulate-toggle:checked + span { background: var(--accent); }
+                        #simulate-toggle:checked + span + span { left: 22px; background: #fff; }
+                    </style>
                     
                     <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👆 Try an example prompt:</p>
                     <div class="examples-grid">
@@ -733,7 +746,8 @@
                 
                 // Add payer (use a demo address if empty)
                 requestBody.payer = payer || '11111111111111111111111111111111';
-                requestBody.skipSimulation = true;
+                const simulateOn = document.getElementById('simulate-toggle').checked;
+                requestBody.skipSimulation = !simulateOn;
                 
                 const response = await fetch('/api/build/natural', {
                     method: 'POST',
