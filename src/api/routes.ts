@@ -130,7 +130,175 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
   try {
     const naturalIntent: NaturalLanguageIntent = req.body;
     
-    // Parse natural language to structured intent (async to resolve token addresses via DexScreener)
+    // Check if the prompt contains multiple intents
+    const intents = IntentParser.parseMultipleIntents(naturalIntent.prompt);
+    
+    if (intents.length > 1) {
+      // Handle multi-intent flow
+      const parsedIntents = await IntentParser.parseMultipleIntentsAsync(naturalIntent.prompt, naturalIntent.payer);
+      
+      // Separate Jupiter swaps from other intents
+      const jupiterSwaps: any[] = [];
+      const nonSwapIntents: any[] = [];
+      
+      for (const parsedIntent of parsedIntents) {
+        // Transform buy/sell params to swap params for DEX protocols
+        let finalParams = { ...parsedIntent.params };
+        if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
+            ['jupiter', 'raydium', 'orca', 'meteora', 'pumpfun'].includes(parsedIntent.protocol)) {
+          const solMint = 'So11111111111111111111111111111111111111112';
+          if (parsedIntent.action === 'buy') {
+            finalParams = {
+              from: solMint,
+              to: finalParams.token,
+              amount: finalParams.amount,
+              slippage: finalParams.slippage || 1.0,
+              pool: finalParams.pool,
+            };
+          } else {
+            finalParams = {
+              from: finalParams.token,
+              to: solMint,
+              amount: finalParams.amount,
+              slippage: finalParams.slippage || 1.0,
+              pool: finalParams.pool,
+            };
+          }
+        }
+
+        // Check if this is a swap action that should go through Jupiter
+        const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action);
+        
+        if (isSwapAction && finalParams.from && finalParams.to) {
+          jupiterSwaps.push({
+            parsedIntent,
+            finalParams,
+            buildIntent: {
+              intent: 'swap',
+              params: {
+                from: finalParams.from,
+                to: finalParams.to,
+                amount: finalParams.amount,
+                slippage: finalParams.slippage || 1.0,
+              },
+              payer: naturalIntent.payer,
+              network: naturalIntent.network,
+              priorityFee: naturalIntent.priorityFee,
+              computeBudget: naturalIntent.computeBudget,
+              skipSimulation: (req.body as any).skipSimulation
+            }
+          });
+        } else {
+          // Non-swap intent - can be combined
+          const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
+          nonSwapIntents.push({
+            parsedIntent,
+            buildIntent: {
+              intent: resolvedIntent,
+              params: finalParams,
+              payer: naturalIntent.payer,
+              network: naturalIntent.network,
+              priorityFee: naturalIntent.priorityFee,
+              computeBudget: naturalIntent.computeBudget,
+              skipSimulation: (req.body as any).skipSimulation
+            }
+          });
+        }
+      }
+      
+      // Build transactions
+      const transactions: Array<{
+        transaction: string;
+        details: any;
+        simulation?: any;
+      }> = [];
+      
+      // Handle Jupiter swaps (each must be a separate transaction)
+      for (const swapData of jupiterSwaps) {
+        try {
+          const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
+          const transaction = await jupiterProtocol.buildSwapTransaction(swapData.buildIntent);
+          
+          transactions.push({
+            transaction,
+            details: {
+              protocol: 'jupiter',
+              action: swapData.parsedIntent.action,
+              resolvedDex: swapData.parsedIntent.protocol,
+              parsedIntent: swapData.parsedIntent,
+              confidence: swapData.parsedIntent.confidence,
+              note: swapData.parsedIntent.protocol !== 'jupiter' 
+                ? `Token identified on ${swapData.parsedIntent.protocol} via DexScreener. Routed through Jupiter for optimal execution.`
+                : undefined
+            }
+          });
+        } catch (error) {
+          console.warn('Jupiter routing failed for swap:', error);
+          // Could fall back to direct protocol handler here
+        }
+      }
+      
+      // Handle non-swap intents (try to combine into one transaction if possible)
+      if (nonSwapIntents.length > 0) {
+        if (nonSwapIntents.length === 1) {
+          // Single non-swap intent
+          const result = await TransactionBuilder.buildTransaction(nonSwapIntents[0].buildIntent);
+          if (result.success && result.transaction) {
+            transactions.push({
+              transaction: result.transaction,
+              details: {
+                ...result.details,
+                parsedIntent: nonSwapIntents[0].parsedIntent,
+                confidence: nonSwapIntents[0].parsedIntent.confidence
+              },
+              simulation: result.simulation
+            });
+          }
+        } else {
+          // Multiple non-swap intents - combine into one transaction
+          const multiIntent = {
+            intents: nonSwapIntents.map(item => item.buildIntent),
+            payer: naturalIntent.payer,
+            network: naturalIntent.network,
+            priorityFee: naturalIntent.priorityFee,
+            computeBudget: naturalIntent.computeBudget
+          };
+          
+          const result = await TransactionBuilder.buildMultiTransaction(multiIntent);
+          if (result.success && result.transaction) {
+            transactions.push({
+              transaction: result.transaction,
+              details: {
+                ...result.details,
+                parsedIntents: nonSwapIntents.map(item => item.parsedIntent)
+              },
+              simulation: result.simulation
+            });
+          }
+        }
+      }
+      
+      // Generate summary
+      const operationCounts: Record<string, number> = {};
+      parsedIntents.forEach(intent => {
+        operationCounts[intent.action] = (operationCounts[intent.action] || 0) + 1;
+      });
+      
+      const summaryParts = Object.entries(operationCounts).map(([action, count]) => 
+        count > 1 ? `${count} ${action}s` : `${action}`
+      );
+      const summary = `${parsedIntents.length} operations: ${summaryParts.join(', ')}`;
+      
+      res.json({
+        success: true,
+        multi: true,
+        transactions,
+        summary
+      });
+      return;
+    }
+    
+    // Single intent flow (existing logic)
     parsedIntent = await IntentParser.parseNaturalLanguageAsync(naturalIntent);
     
     // Map resolved protocol + action to the correct intent name for the builder

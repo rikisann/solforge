@@ -254,6 +254,170 @@ describe('IntentParser', () => {
       });
     });
 
+    describe('Enhanced Unstaking', () => {
+      it('should parse "unstake 5 mSOL from Marinade"', () => {
+        const intent = createIntent('unstake 5 mSOL from Marinade');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('marinade');
+        expect(result.action).toBe('unstake');
+        expect(result.params.amount).toBe(5);
+        expect(result.params.token).toBe('MSOL');
+      });
+
+      it('should parse "unstake my SOL"', () => {
+        const intent = createIntent('unstake my SOL');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('marinade');
+        expect(result.action).toBe('unstake');
+        expect(result.params.token).toBe('SOL');
+      });
+
+      it('should parse "unstake 2.5 SOL from marinade"', () => {
+        const intent = createIntent('unstake 2.5 SOL from marinade');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('marinade');
+        expect(result.action).toBe('unstake');
+        expect(result.params.amount).toBe(2.5);
+        expect(result.params.token).toBe('SOL');
+      });
+    });
+
+    describe('Jito Tips', () => {
+      it('should parse "tip 0.01 SOL to Jito"', () => {
+        const intent = createIntent('tip 0.01 SOL to Jito');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jito');
+        expect(result.action).toBe('tip');
+        expect(result.params.amount).toBe(0.01);
+      });
+
+      it('should parse "jito tip 0.001"', () => {
+        const intent = createIntent('jito tip 0.001');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jito');
+        expect(result.action).toBe('tip');
+        expect(result.params.amount).toBe(0.001);
+      });
+
+      it('should parse "tip 0.005 sol"', () => {
+        const intent = createIntent('tip 0.005 sol');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jito');
+        expect(result.action).toBe('tip');
+        expect(result.params.amount).toBe(0.005);
+      });
+    });
+
+    describe('Close Token Account', () => {
+      it('should parse "close my BONK account"', () => {
+        const intent = createIntent('close my BONK account');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('close');
+        expect(result.params.token).toBe('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+      });
+
+      it('should parse "close USDC token account"', () => {
+        const intent = createIntent('close USDC token account');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('close');
+        expect(result.params.token).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      });
+
+      it('should parse "close WIF account"', () => {
+        const intent = createIntent('close WIF account');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('close');
+        expect(result.params.token).toBe('EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm');
+      });
+    });
+
+    describe('Create ATA', () => {
+      it('should parse "create token account for USDC"', () => {
+        const intent = createIntent('create token account for USDC');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('create-ata');
+        expect(result.params.token).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      });
+
+      it('should parse "create ATA for TOKEN_MINT"', () => {
+        const intent = createIntent(`create ATA for ${TEST_TOKEN_ADDRESS}`);
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('create-ata');
+        expect(result.params.token).toBe(TEST_TOKEN_ADDRESS);
+      });
+
+      it('should parse "create token account for BONK"', () => {
+        const intent = createIntent('create token account for BONK');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('create-ata');
+        expect(result.params.token).toBe('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+      });
+    });
+
+    describe('Enhanced Swap Variations', () => {
+      it('should parse "change all SOL to USDC"', () => {
+        const intent = createIntent('change all SOL to USDC');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jupiter');
+        expect(result.action).toBe('swap');
+        expect(result.params.amount).toBe(-1); // Special flag for "all"
+        expect(result.params.from).toBe('So11111111111111111111111111111111111111112');
+        expect(result.params.to).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      });
+
+      it('should parse "convert all SOL to USDC"', () => {
+        const intent = createIntent('convert all SOL to USDC');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jupiter');
+        expect(result.action).toBe('swap');
+        expect(result.params.amount).toBe(-1); // Special flag for "all"
+        expect(result.params.from).toBe('So11111111111111111111111111111111111111112');
+        expect(result.params.to).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      });
+
+      it('should parse "trade 1 SOL for USDC"', () => {
+        const intent = createIntent('trade 1 SOL for USDC');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jupiter');
+        expect(result.action).toBe('swap');
+        expect(result.params.amount).toBe(1);
+        expect(result.params.from).toBe('So11111111111111111111111111111111111111112');
+        expect(result.params.to).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+      });
+
+      it('should parse "change 5 SOL to BONK"', () => {
+        const intent = createIntent('change 5 SOL to BONK');
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('jupiter');
+        expect(result.action).toBe('swap');
+        expect(result.params.amount).toBe(5);
+        expect(result.params.from).toBe('So11111111111111111111111111111111111111112');
+        expect(result.params.to).toBe('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+      });
+    });
+
     describe('Memo', () => {
       it('should parse memo with quotes', () => {
         const intent = createIntent('write onchain memo: "gm from SolForge"');
@@ -296,6 +460,17 @@ describe('IntentParser', () => {
         expect(result.action).toBe('transfer');
         expect(result.params.amount).toBe(100);
         expect(result.params.token).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+        expect(result.params.to).toBe(recipientAddress);
+      });
+
+      it('should parse "send 100 TOKEN_ADDRESS to ADDRESS" with full mint address', () => {
+        const intent = createIntent(`send 100 ${TEST_TOKEN_ADDRESS} to ${recipientAddress}`);
+        const result = IntentParser.parseNaturalLanguage(intent);
+        
+        expect(result.protocol).toBe('spl-token');
+        expect(result.action).toBe('transfer');
+        expect(result.params.amount).toBe(100);
+        expect(result.params.token).toBe(TEST_TOKEN_ADDRESS);
         expect(result.params.to).toBe(recipientAddress);
       });
     });
@@ -451,6 +626,189 @@ describe('IntentParser', () => {
       const result = IntentParser.parseNaturalLanguage(intent);
       
       expect(result.confidence).toBeLessThan(0.8);
+    });
+  });
+
+  describe('Multi-intent parsing', () => {
+    describe('parseMultipleIntents (sync)', () => {
+      it('should return single intent for prompts without conjunctions', () => {
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC');
+        
+        expect(result).toHaveLength(1);
+        expect(result[0].action).toBe('swap');
+        expect(result[0].protocol).toBe('jupiter');
+      });
+
+      it('should split on " and " followed by a verb', () => {
+        const result = IntentParser.parseMultipleIntents('transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU and tip 0.1 SOL to Jito');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('transfer');
+        expect(result[0].protocol).toBe('system');
+        expect(result[1].action).toBe('tip');
+        expect(result[1].protocol).toBe('jito');
+      });
+
+      it('should split on " then "', () => {
+        const result = IntentParser.parseMultipleIntents('ape 2 SOL into BONK then stake 5 SOL with Marinade');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('buy');
+        expect(result[0].protocol).toBe('__resolve__');
+        expect(result[1].action).toBe('stake');
+        expect(result[1].protocol).toBe('marinade');
+      });
+
+      it('should split on " also "', () => {
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC also write memo gm');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('swap');
+        expect(result[0].protocol).toBe('jupiter');
+        expect(result[1].action).toBe('memo');
+        expect(result[1].protocol).toBe('memo');
+      });
+
+      it('should split on " + "', () => {
+        const result = IntentParser.parseMultipleIntents('memo hello + transfer 1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('memo');
+        expect(result[0].protocol).toBe('memo');
+        expect(result[1].action).toBe('transfer');
+        expect(result[1].protocol).toBe('system');
+      });
+
+      it('should split on ", " followed by a verb', () => {
+        const result = IntentParser.parseMultipleIntents('send 1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU, tip 0.01 SOL to Jito, and write memo batch');
+        
+        expect(result).toHaveLength(3);
+        expect(result[0].action).toBe('transfer');
+        expect(result[0].protocol).toBe('system');
+        expect(result[1].action).toBe('tip');
+        expect(result[1].protocol).toBe('jito');
+        expect(result[2].action).toBe('memo');
+        expect(result[2].protocol).toBe('memo');
+      });
+
+      it('should NOT split on "and" inside words like "expand"', () => {
+        const result = IntentParser.parseMultipleIntents('expand and grow');
+        
+        // Since "expand and grow" doesn't contain a verb after "and", it won't split
+        // and will be treated as a single intent that fails to parse.
+        // The function catches parse errors and continues, so result will be empty.
+        expect(result).toHaveLength(0); // No valid intents parsed (because "expand and grow" fails to parse)
+      });
+
+      it('should properly split when "and" is followed by actual verbs', () => {
+        const result = IntentParser.parseMultipleIntents('transfer 1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU and swap 1 USDC for SOL');
+        
+        // This should split because "and swap" contains a valid verb
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('transfer');
+        expect(result[1].action).toBe('swap');
+      });
+
+      it('should handle complex multi-intent prompt', () => {
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC and write memo gm');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('swap');
+        expect(result[0].params.amount).toBe(1);
+        expect(result[1].action).toBe('memo');
+        expect(result[1].params.message).toBe('gm');
+      });
+    });
+
+    describe('parseMultipleIntentsAsync', () => {
+      it('should handle async parsing for multiple intents', async () => {
+        const result = await IntentParser.parseMultipleIntentsAsync(
+          'transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU and tip 0.1 SOL',
+          TEST_PAYER
+        );
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('transfer');
+        expect(result[0].protocol).toBe('system');
+        expect(result[1].action).toBe('tip');
+        expect(result[1].protocol).toBe('jito');
+      });
+
+      it('should handle single intent via async method', async () => {
+        const result = await IntentParser.parseMultipleIntentsAsync(
+          'swap 1 SOL for USDC',
+          TEST_PAYER
+        );
+        
+        expect(result).toHaveLength(1);
+        expect(result[0].action).toBe('swap');
+        expect(result[0].protocol).toBe('jupiter');
+      });
+    });
+
+    describe('Real-world multi-intent examples', () => {
+      it('should parse transfer and tip combo', () => {
+        const result = IntentParser.parseMultipleIntents(
+          'transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU and tip 0.1 SOL to Jito'
+        );
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('transfer');
+        expect(result[0].params.amount).toBe(0.5);
+        expect(result[1].action).toBe('tip');
+        expect(result[1].params.amount).toBe(0.1);
+      });
+
+      it('should parse swap and memo combo', () => {
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC and write memo gm');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('swap');
+        expect(result[0].params.from).toBe('So11111111111111111111111111111111111111112'); // SOL
+        expect(result[1].action).toBe('memo');
+        expect(result[1].params.message).toBe('gm');
+      });
+
+      it('should parse ape and stake combo', () => {
+        const result = IntentParser.parseMultipleIntents('ape 2 SOL into BONK then stake 5 SOL with Marinade');
+        
+        expect(result).toHaveLength(2);
+        expect(result[0].action).toBe('buy');
+        expect(result[0].params.amount).toBe(2);
+        expect(result[0].params.token).toBe('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263'); // BONK
+        expect(result[1].action).toBe('stake');
+        expect(result[1].params.amount).toBe(5);
+      });
+
+      it('should parse triple operation', () => {
+        const result = IntentParser.parseMultipleIntents(
+          'send 1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU, tip 0.01 SOL to Jito, and write memo batch'
+        );
+        
+        expect(result).toHaveLength(3);
+        expect(result[0].action).toBe('transfer');
+        expect(result[1].action).toBe('tip');
+        expect(result[2].action).toBe('memo');
+        expect(result[2].params.message).toBe('batch');
+      });
+    });
+
+    describe('Edge cases in multi-intent parsing', () => {
+      it('should handle failed parsing of one segment gracefully', () => {
+        // "expand and grow" should fail to parse but not break the whole function
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC and expand and grow');
+        
+        // Should still get the successful parse for the first part
+        expect(result.length).toBeGreaterThan(0);
+        expect(result[0].action).toBe('swap');
+      });
+
+      it('should handle empty segments', () => {
+        const result = IntentParser.parseMultipleIntents('swap 1 SOL for USDC and   ');
+        
+        expect(result).toHaveLength(1);
+        expect(result[0].action).toBe('swap');
+      });
     });
   });
 });

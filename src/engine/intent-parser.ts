@@ -99,16 +99,36 @@ export class IntentParser {
         message: match[1] || match[2]
       })
     },
-    // Stake patterns
+    // Unstake patterns - must come before stake patterns to avoid conflicts
+    // "unstake 5 mSOL from marinade" - specific amount with 'from marinade'
     {
-      pattern: /stake\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with\s+marinade)?/i,
+      pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(m?sol)\s+from\s+marinade/i,
       protocol: 'marinade',
-      action: 'stake',
+      action: 'unstake',
       extractor: (match) => ({
-        amount: parseFloat(match[1])
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
       })
     },
-    // Unstake patterns
+    // "unstake my SOL from marinade"  
+    {
+      pattern: /unstake\s+(?:my\s+)?(\w+)\s+from\s+marinade/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // "unstake my SOL" - generic unstake
+    {
+      pattern: /unstake\s+my\s+(\w+)/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // "unstake X MSOL" - generic pattern without 'from marinade'
     {
       pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(?:msol|marinade)/i,
       protocol: 'marinade',
@@ -117,13 +137,13 @@ export class IntentParser {
         amount: parseFloat(match[1])
       })
     },
-    // Create account patterns
+    // Stake patterns - avoid matching "unstake" by using word boundary
     {
-      pattern: /create\s+(?:token\s+)?account(?:\s+for\s+(\w+))?/i,
-      protocol: 'spl-token',
-      action: 'create-account',
+      pattern: /\bstake\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with\s+marinade)?/i,
+      protocol: 'marinade',
+      action: 'stake',
       extractor: (match) => ({
-        token: match[1] ? match[1].toUpperCase() : null
+        amount: parseFloat(match[1])
       })
     },
     // Close token account patterns
@@ -135,7 +155,7 @@ export class IntentParser {
         token: match[1].toUpperCase()
       })
     },
-    // Create ATA patterns
+    // Create ATA patterns - must come before generic create account pattern
     {
       pattern: /create\s+(?:token\s+account|ata)\s+for\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
       protocol: 'spl-token',
@@ -150,6 +170,15 @@ export class IntentParser {
       action: 'create-ata',
       extractor: (match) => ({
         token: match[1].toUpperCase()
+      })
+    },
+    // Generic create account pattern - made more specific to avoid matching "create token account"
+    {
+      pattern: /create\s+account(?:\s+for\s+(\w+))?/i,
+      protocol: 'spl-token',
+      action: 'create-account',
+      extractor: (match) => ({
+        token: match[1] ? match[1].toUpperCase() : null
       })
     },
     // Jito tip patterns - "tip X SOL to Jito"
@@ -446,34 +475,7 @@ export class IntentParser {
         pool: match[1]
       })
     },
-    // "unstake 5 mSOL from marinade" - specific amount
-    {
-      pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(\w*sol)\s+from\s+marinade/i,
-      protocol: 'marinade',
-      action: 'unstake',
-      extractor: (match) => ({
-        amount: parseFloat(match[1]),
-        token: match[2].toUpperCase()
-      })
-    },
-    // "unstake my SOL from marinade"
-    {
-      pattern: /unstake\s+(?:my\s+)?(\w+)\s+from\s+marinade/i,
-      protocol: 'marinade',
-      action: 'unstake',
-      extractor: (match) => ({
-        token: match[1].toUpperCase()
-      })
-    },
-    // "unstake my SOL" - generic unstake
-    {
-      pattern: /unstake\s+my\s+(\w+)/i,
-      protocol: 'marinade',
-      action: 'unstake',
-      extractor: (match) => ({
-        token: match[1].toUpperCase()
-      })
-    },
+    // Removed duplicate patterns - moved to earlier position
     // "liquid stake 10 SOL" (should route to marinade)
     {
       pattern: /liquid\s+stake\s+(\d+(?:\.\d+)?)\s+sol/i,
@@ -832,7 +834,11 @@ export class IntentParser {
           // If 'to' looks like a token symbol rather than an address
           params.to = resolveMint(params.to);
         }
-        if (params.token && params.token.length <= 10) params.token = resolveMint(params.token);
+        if (params.token && params.token.length <= 10 && 
+            pattern.action !== 'unstake' && pattern.action !== 'close') {
+          // Don't resolve tokens for unstake/close actions to preserve raw token symbols
+          params.token = resolveMint(params.token);
+        }
         
         return {
           protocol: pattern.protocol,

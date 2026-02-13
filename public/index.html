@@ -1329,6 +1329,283 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
             }
         }
 
+        // Sign and send all transactions in sequence
+        async function signAndSendAllTransactions() {
+            if (!connectedWallet || !walletProvider) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            if (!lastTransactionData || !lastTransactionData.transactions) {
+                alert('No transactions to sign. Please build a transaction first.');
+                return;
+            }
+
+            const signAllBtn = document.getElementById('sign-send-all-btn');
+            const resultDiv = document.getElementById('transaction-result');
+            const transactions = lastTransactionData.transactions;
+
+            try {
+                signAllBtn.textContent = 'Signing and sending transactions...';
+                signAllBtn.disabled = true;
+                resultDiv.classList.add('hidden');
+
+                const results = [];
+                
+                for (let i = 0; i < transactions.length; i++) {
+                    const tx = transactions[i];
+                    signAllBtn.textContent = `Processing transaction ${i + 1} of ${transactions.length}...`;
+                    
+                    try {
+                        const signature = await signAndSendSingleTransaction(tx.transaction);
+                        results.push({
+                            index: i,
+                            success: true,
+                            signature: signature,
+                            details: tx.details
+                        });
+                    } catch (error) {
+                        results.push({
+                            index: i,
+                            success: false,
+                            error: error.message,
+                            details: tx.details
+                        });
+                        // Continue with other transactions even if one fails
+                    }
+                }
+
+                // Show results
+                showMultiTransactionResults(results);
+
+            } catch (error) {
+                console.error('Multi-transaction signing failed:', error);
+                resultDiv.innerHTML = `
+                    <div class="p-4 bg-red-900/50 border border-red-700 rounded-xl text-red-200">
+                        <div class="flex items-center mb-2">
+                            <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <strong>Multi-transaction failed</strong>
+                        </div>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                `;
+                resultDiv.classList.remove('hidden');
+            } finally {
+                signAllBtn.textContent = 'Sign & Send All';
+                signAllBtn.disabled = false;
+            }
+        }
+
+        // Sign and send a single transaction (overloaded to handle individual transactions)
+        async function signAndSendTransaction(transactionIndex = null) {
+            if (transactionIndex !== null && lastTransactionData && lastTransactionData.transactions) {
+                // Handle individual transaction from multi-transaction response
+                const tx = lastTransactionData.transactions[transactionIndex];
+                if (!tx) {
+                    alert('Transaction not found');
+                    return;
+                }
+
+                try {
+                    const signature = await signAndSendSingleTransaction(tx.transaction);
+                    showSingleTransactionResult(signature, tx.details, transactionIndex);
+                } catch (error) {
+                    showSingleTransactionError(error.message, transactionIndex);
+                }
+                return;
+            }
+
+            // Original single transaction flow
+            const signBtn = document.getElementById('sign-send-btn');
+            const resultDiv = document.getElementById('transaction-result');
+
+            if (!connectedWallet || !walletProvider) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            if (!lastTransactionData || !lastTransactionData.transaction) {
+                alert('No transaction to sign. Please build a transaction first.');
+                return;
+            }
+
+            try {
+                signBtn.textContent = 'Signing...';
+                signBtn.disabled = true;
+                resultDiv.classList.add('hidden');
+
+                const signature = await signAndSendSingleTransaction(lastTransactionData.transaction);
+                showSingleTransactionResult(signature, lastTransactionData.details || {});
+
+            } catch (error) {
+                console.error('Transaction failed:', error);
+                showSingleTransactionError(error.message);
+            } finally {
+                signBtn.textContent = 'Sign & Send Transaction';
+                signBtn.disabled = false;
+            }
+        }
+
+        // Helper function to sign and send a single transaction
+        async function signAndSendSingleTransaction(transactionBase64) {
+            // Try to deserialize as VersionedTransaction first, fallback to legacy Transaction
+            let transaction;
+            let isVersioned = false;
+            
+            try {
+                const binaryString = atob(transactionBase64); 
+                const transactionBuffer = new Uint8Array(binaryString.length); 
+                for (let i = 0; i < binaryString.length; i++) { 
+                    transactionBuffer[i] = binaryString.charCodeAt(i); 
+                }
+                transaction = solanaWeb3.VersionedTransaction.deserialize(transactionBuffer);
+                isVersioned = true;
+                console.log('Deserialized as VersionedTransaction');
+            } catch (versionedError) {
+                console.log('Failed to deserialize as VersionedTransaction, trying legacy:', versionedError.message);
+                try {
+                    const binaryString = atob(transactionBase64); 
+                    const transactionBuffer = new Uint8Array(binaryString.length); 
+                    for (let i = 0; i < binaryString.length; i++) { 
+                        transactionBuffer[i] = binaryString.charCodeAt(i); 
+                    }
+                    transaction = solanaWeb3.Transaction.from(transactionBuffer);
+                    isVersioned = false;
+                    console.log('Deserialized as legacy Transaction');
+                } catch (legacyError) {
+                    throw new Error(`Failed to deserialize transaction: ${legacyError.message}`);
+                }
+            }
+
+            // Refresh blockhash before signing (server-built tx may have stale blockhash)
+            const conn = getConnection();
+            const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash('confirmed');
+            if (isVersioned) {
+                transaction.message.recentBlockhash = blockhash;
+            } else {
+                transaction.recentBlockhash = blockhash;
+            }
+
+            // Sign transaction
+            const signedTransaction = await walletProvider.signTransaction(transaction);
+
+            // Send transaction
+            const rawTransaction = signedTransaction.serialize();
+            const signature = await getConnection().sendRawTransaction(rawTransaction, {
+                skipPreflight: false,
+                preflightCommitment: 'processed'
+            });
+
+            return signature;
+        }
+
+        // Show multi-transaction results
+        function showMultiTransactionResults(results) {
+            const resultDiv = document.getElementById('transaction-result');
+            const successCount = results.filter(r => r.success).length;
+            const totalCount = results.length;
+
+            let html = `
+                <div class="p-4 ${successCount === totalCount ? 'bg-emerald-900/50 border-emerald-700' : 'bg-yellow-900/50 border-yellow-700'} border rounded-xl">
+                    <div class="flex items-center mb-3">
+                        <svg class="w-5 h-5 ${successCount === totalCount ? 'text-emerald-400' : 'text-yellow-400'} mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <strong>Multi-transaction complete: ${successCount}/${totalCount} succeeded</strong>
+                    </div>
+                    <div class="space-y-2">
+            `;
+
+            results.forEach((result, index) => {
+                const action = result.details.action || result.details.parsedIntent?.action || 'operation';
+                if (result.success) {
+                    html += `
+                        <div class="p-2 bg-emerald-800/30 rounded-lg text-emerald-200 text-sm">
+                            <div class="font-medium">${index + 1}. ${capitalizeProtocol(action)} - ✅ Success</div>
+                            <div class="font-mono text-xs break-all mt-1">${result.signature}</div>
+                            <div class="mt-1">
+                                <a href="https://solscan.io/tx/${result.signature}" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">View on Solscan →</a>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="p-2 bg-red-800/30 rounded-lg text-red-200 text-sm">
+                            <div class="font-medium">${index + 1}. ${capitalizeProtocol(action)} - ❌ Failed</div>
+                            <div class="text-xs mt-1">${result.error}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = html;
+            resultDiv.classList.remove('hidden');
+        }
+
+        // Show single transaction result
+        function showSingleTransactionResult(signature, details, transactionIndex = null) {
+            const resultDiv = document.getElementById('transaction-result');
+            const action = details.action || details.parsedIntent?.action || 'operation';
+            const indexText = transactionIndex !== null ? ` (${transactionIndex + 1})` : '';
+
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-emerald-900/50 border border-emerald-700 rounded-xl text-emerald-200">
+                    <div class="flex items-center mb-2">
+                        <svg class="w-5 h-5 text-emerald-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <strong>${capitalizeProtocol(action)} transaction${indexText} sent successfully! 🎉</strong>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div>
+                            <strong>Signature:</strong> 
+                            <span class="font-mono text-xs break-all">${signature}</span>
+                        </div>
+                        <div>
+                            <strong>Explorer:</strong> 
+                            <a href="https://solscan.io/tx/${signature}" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">View on Solscan →</a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
+        // Show single transaction error
+        function showSingleTransactionError(errorMessage, transactionIndex = null) {
+            const resultDiv = document.getElementById('transaction-result');
+            const indexText = transactionIndex !== null ? ` (${transactionIndex + 1})` : '';
+
+            let displayError = errorMessage;
+            if (errorMessage.includes('4001')) {
+                displayError = 'Transaction rejected by user';
+            } else if (errorMessage.includes('insufficient funds')) {
+                displayError = 'Insufficient funds in wallet';
+            } else if (errorMessage.includes('blockhash not found')) {
+                displayError = 'Transaction expired, please rebuild and try again';
+            }
+
+            resultDiv.innerHTML = `
+                <div class="p-4 bg-red-900/50 border border-red-700 rounded-xl text-red-200">
+                    <div class="flex items-center mb-2">
+                        <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <strong>Transaction${indexText} failed</strong>
+                    </div>
+                    <p class="text-sm">${displayError}</p>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+        }
+
         // Simulation toggle
         function toggleSimulation() {
             simulationEnabled = !simulationEnabled;
@@ -1421,13 +1698,29 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
                 
                 const data = await response.json();
                 
-                // Show transaction preview card if successful
-                if (response.ok && data.success && data.details && data.details.parsedIntent) {
+                // Handle multi-transaction responses
+                if (response.ok && data.success && data.multi && data.transactions) {
+                    showMultiTransactionPreview(data);
+                    outputDiv.textContent = JSON.stringify(data, null, 2);
+                    outputDiv.classList.add('text-slate-300');
+                    
+                    // Show Sign & Send All button for multi-transaction responses
+                    if (connectedWallet) {
+                        lastTransactionData = data;
+                        showMultiTransactionButtons();
+                    }
+                } else if (response.ok && data.success && data.details && data.details.parsedIntent) {
+                    // Single transaction preview
                     showTransactionPreview(data.details);
-                }
-                
-                // Display the response with enhanced error formatting
-                if (!response.ok && data.error) {
+                    outputDiv.textContent = JSON.stringify(data, null, 2);
+                    outputDiv.classList.add('text-slate-300');
+                    
+                    // Show Sign & Send button for single transactions
+                    if (data.transaction && connectedWallet) {
+                        lastTransactionData = data;
+                        signBtn.classList.remove('hidden');
+                    }
+                } else if (!response.ok && data.error) {
                     // Format error with suggestions
                     let errorDisplay = `❌ Error: ${data.error}\n\n`;
                     if (data.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
@@ -1446,12 +1739,6 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
                     outputDiv.classList.add('text-slate-300');
                 }
                 outputDiv.classList.remove('text-emerald-400');
-
-                // Show Sign & Send button if successful and wallet is connected
-                if (response.ok && data.success && data.transaction && connectedWallet) {
-                    lastTransactionData = data;
-                    signBtn.classList.remove('hidden');
-                }
                 
             } catch (error) {
                 console.error('API Error:', error);
@@ -1550,6 +1837,137 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
             previewDiv.classList.remove('hidden');
         }
         
+        // Show multi-transaction preview
+        function showMultiTransactionPreview(data) {
+            const previewDiv = document.getElementById('transaction-preview');
+            const transactions = data.transactions || [];
+            const summary = data.summary || `${transactions.length} transactions`;
+            
+            let previewHTML = `
+                <div class="flex items-center mb-4">
+                    <div class="text-2xl mr-3">⚡</div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">Multi-Transaction Chain</h3>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
+                            <span class="text-emerald-400 text-sm font-medium">${summary}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+            `;
+            
+            transactions.forEach((tx, index) => {
+                const details = tx.details;
+                const action = details.action || details.parsedIntent?.action || 'operation';
+                const protocol = details.protocol;
+                
+                let icon = '⚡';
+                let description = `${capitalizeProtocol(action)} on ${capitalizeProtocol(protocol)}`;
+                
+                // Customize based on action
+                if (action === 'swap' || action === 'buy' || action === 'sell') {
+                    icon = '💱';
+                    const parsedIntent = details.parsedIntent;
+                    if (parsedIntent && parsedIntent.params) {
+                        const fromToken = formatTokenSymbol(parsedIntent.params.from || parsedIntent.params.token);
+                        const toToken = formatTokenSymbol(parsedIntent.params.to || 'SOL');
+                        const amount = formatAmount(parsedIntent.params.amount);
+                        description = `${action} ${amount} ${fromToken} → ${toToken}`;
+                    }
+                } else if (action === 'memo') {
+                    icon = '📝';
+                    const parsedIntent = details.parsedIntent;
+                    if (parsedIntent && parsedIntent.params && parsedIntent.params.message) {
+                        description = `Write memo: "${parsedIntent.params.message}"`;
+                    }
+                } else if (action === 'transfer') {
+                    icon = '💸';
+                    const parsedIntent = details.parsedIntent;
+                    if (parsedIntent && parsedIntent.params) {
+                        const amount = formatAmount(parsedIntent.params.amount);
+                        const token = parsedIntent.params.token === 'So11111111111111111111111111111111111111112' ? 'SOL' : parsedIntent.params.token;
+                        description = `Transfer ${amount} ${token}`;
+                    }
+                } else if (action === 'stake') {
+                    icon = '🥩';
+                    const parsedIntent = details.parsedIntent;
+                    if (parsedIntent && parsedIntent.params) {
+                        const amount = formatAmount(parsedIntent.params.amount);
+                        description = `Stake ${amount} SOL`;
+                    }
+                } else if (action === 'tip') {
+                    icon = '💎';
+                    const parsedIntent = details.parsedIntent;
+                    if (parsedIntent && parsedIntent.params) {
+                        const amount = formatAmount(parsedIntent.params.amount);
+                        description = `Tip ${amount} SOL to Jito`;
+                    }
+                }
+                
+                previewHTML += `
+                    <div class="flex items-center p-3 bg-slate-800/50 rounded-lg">
+                        <span class="text-lg mr-3">${icon}</span>
+                        <div class="flex-1">
+                            <span class="text-white text-sm font-medium">${index + 1}. ${description}</span>
+                            <div class="text-slate-400 text-xs mt-1">${capitalizeProtocol(protocol)}</div>
+                        </div>
+                        <div class="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                    </div>
+                `;
+            });
+            
+            previewHTML += '</div>';
+            
+            previewDiv.innerHTML = previewHTML;
+            previewDiv.classList.remove('hidden');
+        }
+        
+        // Show multi-transaction buttons
+        function showMultiTransactionButtons() {
+            const signBtn = document.getElementById('sign-send-btn');
+            const resultDiv = document.getElementById('transaction-result');
+            
+            // Hide the single transaction button
+            signBtn.classList.add('hidden');
+            
+            // Create multi-transaction buttons if not already present
+            let multiButtonsDiv = document.getElementById('multi-transaction-buttons');
+            if (!multiButtonsDiv) {
+                multiButtonsDiv = document.createElement('div');
+                multiButtonsDiv.id = 'multi-transaction-buttons';
+                multiButtonsDiv.className = 'space-y-3 mt-4';
+                signBtn.parentNode.insertBefore(multiButtonsDiv, signBtn.nextSibling);
+            }
+            
+            const transactions = lastTransactionData.transactions || [];
+            const summary = lastTransactionData.summary || `${transactions.length} transactions`;
+            
+            multiButtonsDiv.innerHTML = `
+                <button id="sign-send-all-btn" class="w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/25 flex items-center justify-center" onclick="signAndSendAllTransactions()">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    Sign & Send All (${transactions.length} transactions)
+                </button>
+                <div class="text-center text-slate-400 text-sm">
+                    ${summary}
+                </div>
+                <div class="space-y-2" id="individual-transaction-buttons">
+                    ${transactions.map((tx, index) => {
+                        const action = tx.details.action || tx.details.parsedIntent?.action || 'operation';
+                        return `
+                            <button class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-all duration-200 flex items-center justify-center" onclick="signAndSendTransaction(${index})">
+                                ${index + 1}. Sign & Send ${capitalizeProtocol(action)}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+            multiButtonsDiv.classList.remove('hidden');
+        }
+
         // Helper functions for formatting
         function formatTokenSymbol(address) {
             const tokenMap = {
