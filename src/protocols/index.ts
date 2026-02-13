@@ -6,6 +6,13 @@ import { SPLTokenProtocol } from './spl-token';
 import { JupiterProtocol } from './jupiter';
 import { MemoProtocol } from './memo';
 import { JitoProtocol } from './jito';
+import { RaydiumProtocol } from './raydium';
+import { PumpFunProtocol } from './pumpfun';
+import { OrcaProtocol } from './orca';
+import { MarinadeProtocol } from './marinade';
+import { MeteoraProtocol } from './meteora';
+import { Token2022Protocol } from './token2022';
+import { StakeProtocol } from './stake';
 
 export class ProtocolRegistry {
   private static handlers: Map<string, ProtocolHandler> = new Map();
@@ -17,6 +24,13 @@ export class ProtocolRegistry {
     this.register(new JupiterProtocol());
     this.register(new MemoProtocol());
     this.register(new JitoProtocol());
+    this.register(new RaydiumProtocol());
+    this.register(new PumpFunProtocol());
+    this.register(new OrcaProtocol());
+    this.register(new MarinadeProtocol());
+    this.register(new MeteoraProtocol());
+    this.register(new Token2022Protocol());
+    this.register(new StakeProtocol());
   }
 
   static register(handler: ProtocolHandler): void {
@@ -58,4 +72,17 @@ export class ProtocolRegistry {
 }
 
 // Export individual protocols for direct access if needed
-export { SystemProtocol, SPLTokenProtocol, JupiterProtocol, MemoProtocol, JitoProtocol };
+export { 
+  SystemProtocol, 
+  SPLTokenProtocol, 
+  JupiterProtocol, 
+  MemoProtocol, 
+  JitoProtocol,
+  RaydiumProtocol,
+  PumpFunProtocol,
+  OrcaProtocol,
+  MarinadeProtocol,
+  MeteoraProtocol,
+  Token2022Protocol,
+  StakeProtocol
+};

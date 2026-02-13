@@ -10,7 +10,41 @@ interface ParsePattern {
 
 export class IntentParser {
   private static patterns: ParsePattern[] = [
-    // Swap patterns
+    // Swap patterns - specific DEX mentions
+    {
+      pattern: /swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:for|to)\s+(\w+)\s+on\s+raydium(?:\s+with(?:\s+less\s+than)?\s+(\d+(?:\.\d+)?)\s*%?\s+slippage)?/i,
+      protocol: 'raydium',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    {
+      pattern: /swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:for|to)\s+(\w+)\s+on\s+orca(?:\s+with(?:\s+less\s+than)?\s+(\d+(?:\.\d+)?)\s*%?\s+slippage)?/i,
+      protocol: 'orca',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    {
+      pattern: /swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:for|to)\s+(\w+)\s+on\s+meteora(?:\s+with(?:\s+less\s+than)?\s+(\d+(?:\.\d+)?)\s*%?\s+slippage)?/i,
+      protocol: 'meteora',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // Generic swap patterns
     {
       pattern: /swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:for|to)\s+(\w+)(?:\s+with(?:\s+less\s+than)?\s+(\d+(?:\.\d+)?)\s*%?\s+slippage)?/i,
       protocol: 'jupiter',
@@ -88,6 +122,138 @@ export class IntentParser {
       extractor: (match) => ({
         amount: parseFloat(match[1])
       })
+    },
+    // Pump.fun patterns
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s+(\w+)?\s*(?:on\s+)?(?:pump\.?fun|pump)/i,
+      protocol: 'pumpfun',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2] || null
+      })
+    },
+    {
+      pattern: /sell\s+(\d+(?:\.\d+)?)\s+(\w+)?\s*(?:on\s+)?(?:pump\.?fun|pump)/i,
+      protocol: 'pumpfun',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2] || null
+      })
+    },
+    {
+      pattern: /create\s+token\s+(?:on\s+)?(?:pump\.?fun|pump)(?:\s+(?:called|named)\s+["\']([^"\']+)["\'])?(?:\s+symbol\s+(\w+))?/i,
+      protocol: 'pumpfun',
+      action: 'create-token',
+      extractor: (match) => ({
+        name: match[1] || 'New Token',
+        symbol: match[2] || 'TOKEN'
+      })
+    },
+    // Marinade staking patterns
+    {
+      pattern: /stake\s+(\d+(?:\.\d+)?)\s+sol\s+(?:with\s+)?(?:marinade|msol)/i,
+      protocol: 'marinade',
+      action: 'stake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    {
+      pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(?:msol|marinade)/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    // Native staking patterns
+    {
+      pattern: /stake\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with(?:\s+validator)?\s+([1-9A-HJ-NP-Za-km-z]{32,44}))?/i,
+      protocol: 'stake',
+      action: 'stake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        validator: match[2] || null
+      })
+    },
+    {
+      pattern: /(?:native\s+)?stake\s+(\d+(?:\.\d+)?)\s+sol/i,
+      protocol: 'stake',
+      action: 'stake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    {
+      pattern: /(?:deactivate|unstake)\s+stake\s+account\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'stake',
+      action: 'deactivate',
+      extractor: (match) => ({
+        stakeAccount: match[1]
+      })
+    },
+    {
+      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+sol\s+from\s+stake\s+account\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'stake',
+      action: 'withdraw',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        stakeAccount: match[2]
+      })
+    },
+    // Token-2022 patterns
+    {
+      pattern: /(?:transfer|send)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+to\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(?:using\s+)?(?:token-?2022|token2022)/i,
+      protocol: 'token2022',
+      action: 'transfer',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        to: match[3]
+      })
+    },
+    // Orca position management
+    {
+      pattern: /open\s+(?:orca\s+)?position\s+(\w+)\s*\/\s*(\w+)(?:\s+from\s+(\d+)\s+to\s+(\d+))?/i,
+      protocol: 'orca',
+      action: 'open-position',
+      extractor: (match) => ({
+        tokenA: match[1].toUpperCase(),
+        tokenB: match[2].toUpperCase(),
+        tickLower: match[3] ? parseInt(match[3]) : -443636,
+        tickUpper: match[4] ? parseInt(match[4]) : 443636
+      })
+    },
+    {
+      pattern: /close\s+(?:orca\s+)?position\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'orca',
+      action: 'close-position',
+      extractor: (match) => ({
+        position: match[1]
+      })
+    },
+    // Meteora liquidity management
+    {
+      pattern: /add\s+liquidity\s+(\d+(?:\.\d+)?)\s+(\w+)\s+and\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to\s+)?meteora/i,
+      protocol: 'meteora',
+      action: 'add-liquidity',
+      extractor: (match) => ({
+        amountA: parseFloat(match[1]),
+        tokenA: match[2].toUpperCase(),
+        amountB: parseFloat(match[3]),
+        tokenB: match[4].toUpperCase()
+      })
+    },
+    {
+      pattern: /remove\s+(\d+(?:\.\d+)?)\s*%?\s+liquidity\s+from\s+meteora\s+position\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'meteora',
+      action: 'remove-liquidity',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        position: match[2]
+      })
     }
   ];
 
@@ -138,11 +304,17 @@ export class IntentParser {
 
   static getSupportedActions(): string[] {
     return [
-      'swap X TOKEN for Y TOKEN',
+      'swap X TOKEN for Y TOKEN (on raydium/orca/meteora)',
       'transfer/send X SOL to ADDRESS',
       'transfer/send X TOKEN to ADDRESS', 
-      'stake X SOL',
+      'stake X SOL (with marinade or native)',
       'unstake X MSOL',
+      'buy/sell tokens on pump.fun',
+      'create token on pump.fun',
+      'native stake X SOL with validator',
+      'open/close orca positions',
+      'add/remove meteora liquidity',
+      'token-2022 operations',
       'memo "message"',
       'tip X SOL',
       'create token account'
@@ -151,12 +323,26 @@ export class IntentParser {
 
   static getExamples(): Record<string, string> {
     return {
-      swap: 'swap 1 SOL for USDC with 0.5% slippage',
+      swap_jupiter: 'swap 1 SOL for USDC with 0.5% slippage',
+      swap_raydium: 'swap 1 SOL for USDC on raydium',
+      swap_orca: 'swap 1 SOL for USDC on orca',
+      swap_meteora: 'swap 1 SOL for USDC on meteora',
       transfer_sol: 'send 0.1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
       transfer_token: 'transfer 100 USDC to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+      transfer_token2022: 'send 100 USDC to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU using token-2022',
       memo: 'memo "Hello Solana!"',
-      stake: 'stake 1 SOL with marinade',
-      unstake: 'unstake 0.9 MSOL',
+      stake_marinade: 'stake 1 SOL with marinade',
+      unstake_marinade: 'unstake 0.9 MSOL',
+      stake_native: 'stake 10 SOL with validator J1to3PQfXidUUhprQWgdKkQAMWPJAEqSJ7amkBDE9qhF',
+      deactivate_stake: 'deactivate stake account StakeAccount123...',
+      withdraw_stake: 'withdraw 5 SOL from stake account StakeAccount123...',
+      pump_buy: 'buy 1000 BONK on pump.fun',
+      pump_sell: 'sell 500 BONK on pump.fun',
+      pump_create: 'create token on pump.fun called "My Token" symbol MYTKN',
+      orca_position: 'open orca position SOL/USDC from -1000 to 1000',
+      orca_close: 'close orca position PositionNFT123...',
+      meteora_add: 'add liquidity 1 SOL and 100 USDC to meteora',
+      meteora_remove: 'remove 50% liquidity from meteora position Position123...',
       tip: 'tip 0.0001 SOL'
     };
   }
