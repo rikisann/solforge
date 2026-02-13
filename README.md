@@ -10,6 +10,37 @@ SolForge is a universal transaction builder API for Solana. Describe what you wa
 
 ---
 
+## 🔌 MCP Server — Plug Into Any AI Agent
+
+SolForge ships as an **MCP (Model Context Protocol) server**, meaning any AI agent (Claude, GPT, etc.) can use it as a tool out of the box.
+
+```json
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "solforge": {
+      "command": "node",
+      "args": ["/path/to/solforge/dist/mcp.js"],
+      "env": {
+        "SOLANA_MAINNET_RPC": "your_rpc_url"
+      }
+    }
+  }
+}
+```
+
+Your AI agent instantly gets these tools:
+- **`build_transaction_natural`** — "Swap 5 SOL for BONK" → ready-to-sign transaction
+- **`build_transaction`** — Structured intent builder
+- **`resolve_token`** — Token/pair lookup via DexScreener
+- **`list_protocols`** — See all 12+ supported protocols
+- **`estimate_transaction`** — Check fees before building
+- **`decode_transaction`** — Decode any Solana transaction
+
+No REST API calls, no HTTP overhead — direct tool integration via stdio.
+
+---
+
 ## Why SolForge?
 
 Every Solana app rebuilds the same integrations. Jupiter swap? Different SDK. Marinade stake? Different pattern. Pump.fun buy? Different everything. Each protocol has its own quirks, its own transaction format, its own error codes.
@@ -19,7 +50,7 @@ Every Solana app rebuilds the same integrations. Jupiter swap? Different SDK. Ma
 One API call. Any protocol. Any operation. You describe what you want, SolForge figures out the rest.
 
 ### For AI Agents
-AI agents shouldn't need to know the difference between Orca and Raydium. They should say *"swap 5 SOL for BONK"* and get a transaction back. SolForge is the **knowledge layer** between AI agents and the Solana blockchain — it knows 12+ protocol IDLs so your agent doesn't have to.
+AI agents shouldn't need to know the difference between Orca and Raydium. They should say *"swap 5 SOL for BONK"* and get a transaction back. SolForge is the **knowledge layer** between AI agents and the Solana blockchain — it knows 12+ protocol IDLs so your agent doesn't have to. Plug in via **MCP** or **REST API** — your choice.
 
 ### For Developers
 Stop importing 15 different SDKs. SolForge gives you one consistent API with structured intents, natural language support, and real-time protocol resolution. Build your app, not your infrastructure.
@@ -291,10 +322,18 @@ Returns comprehensive JSON documentation for all endpoints.
 
 ## Use Cases
 
-### 🤖 AI Agent Integration
+### 🤖 AI Agent Integration (MCP)
+```json
+// Any MCP-compatible agent (Claude, GPT, etc.) can call SolForge tools directly:
+// Tool: build_transaction_natural
+// Input: { "prompt": "swap 5 SOL for USDC", "payer": "WALLET_ADDRESS" }
+// Output: { "transaction": "base64...", "protocol": "jupiter", "confidence": 0.95 }
+```
+
+### 🤖 AI Agent Integration (REST)
 ```python
-# Your agent just needs one API call
-response = requests.post("https://solforge.dev/api/build/natural", json={
+# Or use the REST API from any language
+response = requests.post("https://your-solforge-url/api/build/natural", json={
     "prompt": agent_decision,  # "swap 5 SOL for USDC"
     "payer": wallet_address
 })

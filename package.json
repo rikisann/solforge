@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@solana/spl-token": "^0.4.1",
     "@solana/web3.js": "^1.87.6",
     "axios": "^1.6.2",
