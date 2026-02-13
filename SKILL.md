@@ -37,39 +37,59 @@ The `transaction` field is a base64-encoded Solana transaction ready for wallet 
 
 **IMPORTANT:** Use these exact phrasings for best results. The parser uses regex patterns, not an LLM, so structure matters.
 
-**Swaps (use "swap X FROM for TO"):**
+**Swaps (many verbs supported):**
 - `"Swap 5 SOL for BONK"` ← best format
 - `"Swap 1 SOL for USDC with 0.5% slippage"`
+- `"Swap SOL to USDC"` (defaults to 1 SOL)
+- `"Exchange 5 SOL for BONK"` / `"Exchange 5 SOL into BONK"`
 - `"Convert 100 USDC to SOL"`
-- `"Buy 5 BONK"` (shorthand — buys 5 SOL worth of BONK)
-- `"Buy USDC"` (defaults to 1 SOL worth)
+- `"Trade 3 SOL for USDC"` / `"Trade 3 SOL for USDC with 1% slippage"`
+- `"Change 50 USDT to USDC"`
+- `"Flip SOL to USDC"`
+- Prefixed with natural language: `"I want to swap 2 SOL for USDC"`, `"please swap 1 SOL to USDC"`
 
-**With mint addresses (use "swap X SOL for MINT_ADDRESS"):**
+**Buy variations:**
+- `"Buy 5 BONK"` / `"Buy BONK"` (defaults to 1 SOL worth)
+- `"Buy some BONK"` / `"Purchase BONK"` / `"Get me BONK"`
+- `"Buy 5 SOL worth of BONK"` / `"Buy 5 SOL of BONK"`
+- `"Buy BONK with 5 SOL"` / `"Get me 2 SOL of USDC"`
+
+**Sell variations:**
+- `"Sell BONK"` / `"Sell 100 BONK"` / `"Sell 100 BONK for SOL"`
+- `"Sell my BONK"` / `"Sell my BONK for SOL"` / `"Sell all BONK"`
+- `"Dump BONK"` / `"Short BONK"`
+
+**Degen slang:**
+- `"Ape 5 SOL into BONK"` / `"Ape into BONK"` (defaults to 1 SOL)
+- `"Yolo 1 SOL into BONK"`
+- `"Long BONK with 2 SOL"` (buy) / `"Short BONK"` (sell)
+
+**With mint addresses:**
 - `"Swap 2 SOL for DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"`
-- `"Ape 1 SOL into MINT_ADDRESS"`
+- `"Ape 5 SOL into MINT_ADDRESS"`
+
+**DEX-specific swaps:**
+- `"Swap 1 SOL for USDC on raydium"` / `on orca` / `on meteora`
+
+**Transfers:**
+- `"Send 0.5 SOL to ADDRESS"` / `"Transfer 100 USDC to ADDRESS"`
+- `"Pay ADDRESS 1 SOL"` / `"Send ADDRESS 2 USDC"` (address-first format)
 
 **Staking:**
-- `"Liquid stake 10 SOL with Marinade"`
-- `"Unstake 5 mSOL from Marinade"`
-
-**Transfers (use "send AMOUNT TOKEN to ADDRESS"):**
-- `"Send 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"`
-- `"Send 100 USDC to ADDRESS"`
+- `"Stake 5 SOL"` / `"Liquid stake 5 SOL"` / `"Stake 5 SOL with Marinade"`
+- `"Unstake 5 mSOL"` / `"Unstake 5 mSOL from Marinade"` / `"Withdraw stake"`
 
 **Memos:**
-- `"Write onchain memo: hello world"`
+- `"Memo hello world"` / `"Write memo gm"` / `"Onchain memo: test"` / `"Post memo: hello"`
 
 **Tips:**
-- `"Tip 0.01 SOL to Jito"`
+- `"Tip 0.01 SOL to Jito"` / `"Tip jito 0.01 SOL"` / `"Jito tip 0.01"`
+- `"Tip 0.01 to jito"` / `"Send jito tip"` (default 0.001 SOL)
 
-**Chained operations (use "and" between operations):**
+**Chained operations (use "and" or "then" between operations):**
 - `"Swap 1 SOL for USDC and tip 0.01 SOL to Jito"`
-- `"Send 0.5 SOL to ADDRESS and write memo gm"`
-
-**⚠️ Patterns that WON'T work:**
-- `"Buy 5 BONK with SOL"` — use `"Swap 5 SOL for BONK"` instead
-- `"Purchase BONK tokens"` — use `"Buy BONK"` or `"Swap 1 SOL for BONK"`
-- `"I want to exchange my SOL for USDC"` — use `"Swap 1 SOL for USDC"`
+- `"Send 0.5 SOL to ADDRESS then write memo gm"`
+- `"Buy BONK and tip jito 0.01"`
 
 When in doubt, use the format: **"Swap [AMOUNT] [FROM_TOKEN] for [TO_TOKEN]"**
 
