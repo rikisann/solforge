@@ -654,6 +654,32 @@ router.post('/api/quote', async (req: Request, res: Response) => {
 });
 
 // Resolve endpoint for token/pair resolution without building transaction
+// GET version of resolve for easy browser/agent access
+router.get('/api/resolve', async (req: Request, res: Response) => {
+  try {
+    const query = req.query.query as string;
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'query parameter is required. Usage: /api/resolve?query=BONK' });
+    }
+    
+    // Try token resolution
+    const tokenResult = await TokenResolver.resolveToken(query);
+    if (tokenResult) {
+      return res.json({ success: true, token: tokenResult });
+    }
+    
+    // Try pair resolution
+    const pairResult = await TokenResolver.resolveByPair(query);
+    if (pairResult) {
+      return res.json({ success: true, pair: pairResult });
+    }
+    
+    return res.status(404).json({ success: false, error: `Could not resolve "${query}". Try a full mint address or pair address.` });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error instanceof Error ? error.message : 'Resolution failed' });
+  }
+});
+
 router.post('/api/resolve', async (req: Request, res: Response) => {
   try {
     const { address, type } = req.body;

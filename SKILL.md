@@ -1,128 +1,91 @@
 # SolForge Skill — Solana Transaction Builder
 
-Add this to your Claude's context to give it the ability to build and execute Solana transactions using natural language.
-
-## Setup
-
-### Option 1: MCP Server (Recommended)
-Add to your Claude Desktop `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "solforge": {
-      "command": "node",
-      "args": ["/path/to/solforge/dist/mcp.js"],
-      "env": {
-        "SOLANA_MAINNET_RPC": "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY",
-        "JUPITER_API_URL": "https://lite-api.jup.ag/swap/v1"
-      }
-    }
-  }
-}
-```
-
-### Option 2: REST API
-If SolForge is running as a server, use these endpoints:
+Use SolForge to build Solana transactions from natural language. One API call does everything.
 
 **Base URL:** `https://solforge-production.up.railway.app`
 
-## Available Tools
-
-### Build Transaction from Natural Language
-The primary tool. Describe what you want in plain English.
+## The Only Endpoint You Need
 
 ```bash
 POST /api/build/natural
 Content-Type: application/json
 
 {
-  "prompt": "Swap 1 SOL for USDC",
-  "payer": "WALLET_PUBLIC_KEY",
-  "skipSimulation": false
-}
-```
-
-**Response:** Returns a base64-encoded transaction ready to sign and send.
-
-**Supported prompts:**
-- Swaps: "Swap 5 SOL for BONK", "Convert 100 USDC to SOL", "Ape into TOKEN_ADDRESS"
-- Staking: "Liquid stake 10 SOL with Marinade"
-- Transfers: "Send 0.5 SOL to ADDRESS"
-- Memos: "Write onchain memo: hello world"
-- Pair trading: "Buy 1 SOL of pair PAIR_ADDRESS"
-- Sells: "Dump my WIF", "Sell TOKEN for SOL"
-- Slippage: "Swap 1 SOL for USDC with 0.5% slippage"
-
-### Resolve Token Info
-Look up any token or trading pair before building a transaction.
-
-```bash
-GET /api/resolve?query=BONK
-GET /api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263
-```
-
-Returns: symbol, name, mint address, primary DEX, price, liquidity.
-
-### Build Structured Transaction
-For precise control over parameters:
-
-```bash
-POST /api/build
-{
-  "intent": "swap",
-  "params": { "from": "SOL", "to": "USDC", "amount": 1.0, "slippage": 0.5 },
+  "prompt": "Swap 2 SOL for USDC",
   "payer": "WALLET_PUBLIC_KEY"
 }
 ```
 
-**Available intents:** `transfer`, `token-transfer`, `swap`, `memo`, `tip`, `marinade-stake`, `marinade-unstake`, `raydium-swap`, `orca-swap`, `meteora-swap`, `pumpfun-buy`, `pumpfun-sell`, `stake`, `delegate`
+**That's it.** SolForge handles token resolution, protocol detection, and optimal routing automatically. You do NOT need to resolve tokens first — just put the token name or mint address directly in the prompt.
 
-### Batch Multiple Operations
-Combine multiple operations into one atomic transaction:
-
-```bash
-POST /api/build/multi
+### Response
+```json
 {
-  "intents": [
-    { "intent": "memo", "params": { "message": "batch tx" } },
-    { "intent": "transfer", "params": { "to": "ADDRESS", "amount": 0.01 } }
-  ],
-  "payer": "WALLET_PUBLIC_KEY"
+  "success": true,
+  "transaction": "base64_encoded_transaction_ready_to_sign",
+  "details": {
+    "protocol": "jupiter",
+    "parsedIntent": { "action": "swap", "params": { "from": "SOL", "to": "USDC", "amount": 2 } },
+    "confidence": 0.95
+  }
 }
 ```
 
-### Decode Transaction
-Understand what a transaction does:
+The `transaction` field is a base64-encoded Solana transaction ready for wallet signing.
 
-```bash
-POST /api/decode
-{ "transaction": "AQAAAA...base64..." }
-```
+### What You Can Say
 
-### Estimate Fees
-Check costs before building:
+**Swaps** — SolForge resolves any token automatically:
+- `"Swap 5 SOL for BONK"`
+- `"Swap 2 SOL for Tesla AI token"` (resolves via DexScreener)
+- `"Convert 100 USDC to SOL with 0.5% slippage"`
+- `"Ape 1 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"` (mint address works too)
 
-```bash
-POST /api/estimate
-{ "intent": "transfer", "params": { "to": "ADDRESS", "amount": 1.0 }, "payer": "WALLET" }
-```
+**Staking:**
+- `"Liquid stake 10 SOL with Marinade"`
+- `"Unstake 5 mSOL from Marinade"`
 
-### List Protocols
-See all 12+ supported protocols:
+**Transfers:**
+- `"Send 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"`
+- `"Send 100 USDC to ADDRESS"`
 
-```bash
-GET /api/protocols
-```
+**Memos:**
+- `"Write onchain memo: hello world"`
 
-## Tips for AI Agents
+**Tips:**
+- `"Tip 0.01 SOL to Jito"`
 
-1. **Always use `/api/build/natural`** unless you need precise parameter control — it handles protocol detection, token resolution, and optimal routing automatically.
-2. **Use `skipSimulation: true`** if the wallet doesn't have funds yet or you just want to show the transaction structure.
-3. **Token addresses work directly** — paste any Solana mint address and SolForge will resolve it via DexScreener.
-4. **Pair addresses work too** — "Buy 1 SOL of pair ADDRESS" looks up the pair, identifies the token, and routes through Jupiter.
-5. **The response `transaction` field** is a base64-encoded Solana transaction ready for wallet signing.
-6. **Check `details.protocol`** in the response to see which protocol was used.
-7. **Check `details.confidence`** to see how confident the NLP parser was in its interpretation.
+**Chained operations** (builds multiple in one call):
+- `"Swap 1 SOL for USDC and tip 0.01 SOL to Jito"` (Jito tip bundled into swap tx)
+- `"Send 0.5 SOL to ADDRESS and write memo gm"`
+
+### Options
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `prompt` | string | ✅ | Natural language description |
+| `payer` | string | ✅ | Wallet public key |
+| `skipSimulation` | boolean | No | Skip RPC simulation (use for demos/unfunded wallets) |
+| `network` | string | No | `"mainnet"` (default) or `"devnet"` |
+
+## Other Endpoints (Optional)
+
+Most agents only need `/api/build/natural`. These are available if you need them:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/build` | Structured intent builder (for programmatic use) |
+| POST | `/api/build/multi` | Batch multiple structured intents |
+| POST | `/api/decode` | Decode a base64 transaction |
+| POST | `/api/estimate` | Estimate fees before building |
+| GET | `/api/resolve?query=BONK` | Look up token/pair info |
+| GET | `/api/protocols` | List all 12+ supported protocols |
+
+## Key Tips
+
+1. **Don't resolve tokens separately.** Just put the token name in the prompt — SolForge resolves it automatically via DexScreener.
+2. **Use `skipSimulation: true`** if the wallet doesn't have funds or you just want the transaction structure.
+3. **Mint addresses work directly** in prompts — no need to look them up first.
+4. **The response `transaction` is ready to sign** — deserialize with `@solana/web3.js` and sign with the wallet.
 
 ## Supported Protocols
-Jupiter, Raydium, Orca, Meteora, Pump.fun, Marinade, System Program, SPL Token, Token-2022, Memo, Jito, Native Stake — all through one unified API.
+Jupiter, Raydium, Orca, Meteora, Pump.fun, Marinade, System Program, SPL Token, Token-2022, Memo, Jito, Native Stake.
