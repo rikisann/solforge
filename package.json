@@ -26,6 +26,7 @@
     "@kamino-finance/klend-sdk": "^7.3.18",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@mrgnlabs/marginfi-client-v2": "^6.4.1",
+    "@solana/kit": "^3.0.3",
     "@solana/spl-token": "^0.4.1",
     "@solana/web3.js": "^1.87.6",
     "@solendprotocol/solend-sdk": "^0.14.26",

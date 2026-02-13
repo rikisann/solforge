@@ -1,6 +1,7 @@
 import { 
   TransactionInstruction, 
   PublicKey, 
+  Keypair
 } from '@solana/web3.js';
 import { BuildIntent, ProtocolHandler } from '../utils/types';
 import { resolveMint, RPCConnection } from '../utils/connection';
@@ -45,105 +46,178 @@ export class MarginfiProtocol implements ProtocolHandler {
       return MarginfiProtocol.clientCache;
     }
     
-    // For now, throw an error indicating Marginfi integration needs account setup
-    throw new Error('Marginfi integration requires manual account setup. Please create a Marginfi account first using their app, then this integration will work.');
+    const { MarginfiClient, getConfig } = require('@mrgnlabs/marginfi-client-v2');
+    const { Connection } = require('@solana/web3.js');
+    
+    const rpcUrl = process.env.SOLANA_MAINNET_RPC || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(rpcUrl, 'confirmed');
+    
+    // Use the mainnet production configuration
+    const config = getConfig('production');
+    
+    // Create a minimal wallet for the client (it just needs the interface)
+    const dummyWallet = {
+      publicKey: new PublicKey('11111111111111111111111111111111'),
+      signTransaction: async () => { throw new Error('Dummy wallet cannot sign'); },
+      signAllTransactions: async () => { throw new Error('Dummy wallet cannot sign'); },
+    };
+    
+    const client = await MarginfiClient.fetch(config, dummyWallet, connection);
+    
+    MarginfiProtocol.clientCache = { client, connection, config };
+    MarginfiProtocol.clientCacheTime = now;
+    return { client, connection, config };
   }
 
   private async buildWithSDK(intent: BuildIntent, action: 'deposit' | 'borrow' | 'repay' | 'withdraw'): Promise<TransactionInstruction[]> {
-    const { address, createNoopSigner } = require('@solana/kit');
     const BN = require('bn.js');
+    const { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } = require('@solana/spl-token');
+    const { instructions } = require('@mrgnlabs/marginfi-client-v2');
 
     const { client, connection } = await this.getClient();
     
-    const tokenMint = address(resolveMint(intent.params.token));
-    const payerAddr = address(intent.payer);
-    const owner = createNoopSigner(payerAddr);
+    const tokenMint = new PublicKey(resolveMint(intent.params.token));
+    const payerPk = new PublicKey(intent.payer);
 
     // Find the bank for this token
-    const banks = Array.from(client.banks.values());
-    const bank = banks.find((b: any) => b.mint?.toString() === tokenMint.toString());
+    const bank = client.getBankByMint(tokenMint);
     
     if (!bank) {
-      throw new Error(`No Marginfi bank found for token ${intent.params.token}`);
+      throw new Error(`No Marginfi bank found for token ${intent.params.token}. Available tokens: ${Array.from(client.banks.values()).map((b: any) => b.mint?.toString()).filter(Boolean).join(', ')}`);
     }
 
     // Get token decimals
-    const decimals = (bank as any).mintDecimals || 6;
-    const amountBN = new BN(Math.floor(intent.params.amount * Math.pow(10, decimals)));
-
-    // Get or create marginfi account for the user
-    let marginfiAccount;
-    try {
-      // Try to fetch existing account
-      const marginfiAccounts = await client.getMarginfiAccountsForAuthority(payerAddr);
-      if (marginfiAccounts.length > 0) {
-        marginfiAccount = marginfiAccounts[0]; // Use first account
-      } else {
-        // Create new marginfi account instruction
-        const createAccountIx = await client.makeCreateMarginfiAccountIx(owner);
-        // We'll need to handle account creation separately in a real implementation
-        // For now, throw an error requiring manual account creation
-        throw new Error('Marginfi account not found. Please create a Marginfi account first.');
-      }
-    } catch (error) {
-      throw new Error(`Failed to get Marginfi account: ${error}`);
+    const mintInfo = await connection.getParsedAccountInfo(tokenMint);
+    let decimals = 6;
+    if (mintInfo.value?.data && 'parsed' in mintInfo.value.data) {
+      decimals = mintInfo.value.data.parsed.info.decimals;
     }
 
-    let instructions: any[] = [];
+    // Handle amount calculation
+    let amount = intent.params.amount;
+    if (!amount || amount <= 0) {
+      try {
+        const ata = await getAssociatedTokenAddress(tokenMint, payerPk);
+        const balance = await connection.getTokenAccountBalance(ata);
+        amount = parseFloat(balance.value.uiAmountString || '0');
+        if (amount <= 0) throw new Error('No token balance found');
+      } catch (e: any) {
+        throw new Error(`Cannot determine amount. Specify an amount or ensure wallet has ${intent.params.token} balance.`);
+      }
+    }
+    
+    const amountBN = new BN(Math.floor(amount * Math.pow(10, decimals)));
+
+    // Check if user has existing marginfi accounts
+    let marginfiAccounts = [];
+    try {
+      marginfiAccounts = await client.getMarginfiAccountsForAuthority(payerPk);
+    } catch (error) {
+      console.warn('Failed to fetch marginfi accounts:', error);
+    }
+
+    const allInstructions: TransactionInstruction[] = [];
+
+    // If no marginfi account exists, create one
+    let marginfiAccountPk: PublicKey;
+    if (marginfiAccounts.length === 0) {
+      console.log('No existing Marginfi account found. Creating new account...');
+      
+      // Generate a new keypair for the marginfi account
+      const marginfiAccountKeypair = Keypair.generate();
+      marginfiAccountPk = marginfiAccountKeypair.publicKey;
+      
+      // Create account initialization instruction
+      const initAccountIx = await instructions.makeInitMarginfiAccountIx(
+        client.program,
+        {
+          marginfiGroup: client.groupAddress,
+          marginfiAccount: marginfiAccountPk,
+          authority: payerPk,
+          feePayer: payerPk,
+        }
+      );
+      
+      allInstructions.push(initAccountIx);
+    } else {
+      // Use existing account
+      marginfiAccountPk = marginfiAccounts[0].address;
+    }
+
+    // Get token account address
+    const tokenAccountPk = await getAssociatedTokenAddress(tokenMint, payerPk);
+
+    // Build the specific operation instruction
+    let operationIx: TransactionInstruction;
 
     switch (action) {
       case 'deposit':
-        instructions = await marginfiAccount.makeDepositIx(amountBN, (bank as any).address);
+        operationIx = await instructions.makeDepositIx(
+          client.program,
+          {
+            marginfiAccount: marginfiAccountPk,
+            signerTokenAccount: tokenAccountPk,
+            bank: bank.address,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            group: client.groupAddress,
+            authority: payerPk,
+          },
+          { amount: amountBN }
+        );
         break;
       case 'borrow':
-        instructions = await marginfiAccount.makeBorrowIx(amountBN, (bank as any).address);
+        operationIx = await instructions.makeBorrowIx(
+          client.program,
+          {
+            marginfiAccount: marginfiAccountPk,
+            bank: bank.address,
+            destinationTokenAccount: tokenAccountPk,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            group: client.groupAddress,
+            authority: payerPk,
+          },
+          { amount: amountBN }
+        );
         break;
       case 'repay':
-        instructions = await marginfiAccount.makeRepayIx(amountBN, (bank as any).address, true);
+        operationIx = await instructions.makeRepayIx(
+          client.program,
+          {
+            marginfiAccount: marginfiAccountPk,
+            signerTokenAccount: tokenAccountPk,
+            bank: bank.address,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            group: client.groupAddress,
+            authority: payerPk,
+          },
+          { amount: amountBN, repayAll: false }
+        );
         break;
       case 'withdraw':
-        instructions = await marginfiAccount.makeWithdrawIx(amountBN, (bank as any).address);
+        operationIx = await instructions.makeWithdrawIx(
+          client.program,
+          {
+            marginfiAccount: marginfiAccountPk,
+            bank: bank.address,
+            destinationTokenAccount: tokenAccountPk,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            group: client.groupAddress,
+            authority: payerPk,
+          },
+          { amount: amountBN, withdrawAll: false }
+        );
         break;
+      default:
+        throw new Error(`Unsupported action: ${action}`);
     }
 
-    // Convert @solana/kit instructions to @solana/web3.js TransactionInstructions
-    const convertIx = (ix: any): TransactionInstruction => {
-      return new TransactionInstruction({
-        programId: new PublicKey(ix.programAddress?.toString() || ix.programId?.toString()),
-        keys: (ix.accounts || ix.keys || []).map((acc: any) => ({
-          pubkey: new PublicKey(acc.address?.toString() || acc.pubkey?.toString()),
-          isSigner: acc.role === 2 || acc.role === 3 || acc.isSigner === true,
-          isWritable: acc.role === 1 || acc.role === 3 || acc.isWritable === true,
-        })),
-        data: Buffer.from(ix.data || []),
-      });
-    };
+    allInstructions.push(operationIx);
 
-    const allIxs: TransactionInstruction[] = [];
-    
-    // Handle different instruction formats
-    if (Array.isArray(instructions)) {
-      allIxs.push(...instructions.map(convertIx));
-    } else if (instructions && typeof instructions === 'object') {
-      // Handle structured instruction object
-      const structuredIx = instructions as any;
-      if (structuredIx.setupIxs) allIxs.push(...structuredIx.setupIxs.map(convertIx));
-      if (structuredIx.lendingIxs) allIxs.push(...structuredIx.lendingIxs.map(convertIx));
-      if (structuredIx.cleanupIxs) allIxs.push(...structuredIx.cleanupIxs.map(convertIx));
-      
-      // If none of the structured props exist, treat as single instruction
-      if (!structuredIx.setupIxs && !structuredIx.lendingIxs && !structuredIx.cleanupIxs) {
-        allIxs.push(convertIx(instructions));
-      }
-    } else {
-      throw new Error('Invalid instruction format from Marginfi SDK');
+    if (allInstructions.length === 0) {
+      throw new Error('No instructions generated for Marginfi operation');
     }
 
-    if (allIxs.length === 0) {
-      throw new Error('Marginfi SDK returned no instructions');
-    }
-
-    return allIxs;
+    return allInstructions;
   }
 
   getRequiredAccounts(params: Record<string, any>): PublicKey[] {
