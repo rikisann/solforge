@@ -807,7 +807,8 @@
 
         function getConnection() {
             if (!connection && typeof solanaWeb3 !== 'undefined') {
-                connection = new solanaWeb3.Connection('/api/rpc');
+                const rpcUrl = window.location.origin + '/api/rpc';
+                connection = new solanaWeb3.Connection(rpcUrl);
             }
             return connection;
         }
