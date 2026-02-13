@@ -124,6 +124,37 @@ export class IntentParser {
       })
     },
     // Pump.fun patterns
+    // "buy 0.5 sol of BiRn5SWNvRnA43Rr3Zv24qPnzTQHHZBfoNBit1Gzpump" (auto-detect pump suffix)
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44}pump)\b/i,
+      protocol: 'pumpfun',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2]
+      })
+    },
+    // "buy 0.5 sol of TOKEN_ADDRESS" (any address)
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
+      protocol: 'pumpfun',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2]
+      })
+    },
+    // "buy TOKEN_ADDRESS with 0.5 sol"
+    {
+      pattern: /buy\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(?:with\s+)?(\d+(?:\.\d+)?)\s*sol/i,
+      protocol: 'pumpfun',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        token: match[1]
+      })
+    },
+    // "buy 0.5 SOL on pump.fun" (no token specified)
     {
       pattern: /buy\s+(\d+(?:\.\d+)?)\s+(\w+)?\s*(?:on\s+)?(?:pump\.?fun|pump)/i,
       protocol: 'pumpfun',
@@ -131,6 +162,16 @@ export class IntentParser {
       extractor: (match) => ({
         amount: parseFloat(match[1]),
         token: match[2] || null
+      })
+    },
+    // "sell 0.5 sol of TOKEN_ADDRESS"
+    {
+      pattern: /sell\s+(\d+(?:\.\d+)?)\s*(?:sol\s+)?(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
+      protocol: 'pumpfun',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2]
       })
     },
     {
@@ -258,10 +299,12 @@ export class IntentParser {
   ];
 
   static parseNaturalLanguage(intent: NaturalLanguageIntent): ParsedIntent {
-    const prompt = intent.prompt.trim().toLowerCase();
+    const originalPrompt = intent.prompt.trim();
+    const prompt = originalPrompt.toLowerCase();
     
     for (const pattern of this.patterns) {
-      const match = prompt.match(pattern.pattern);
+      // Match against lowercase for keyword matching, but extract from original to preserve case (addresses are case-sensitive)
+      const match = originalPrompt.match(pattern.pattern) || prompt.match(pattern.pattern);
       if (match) {
         const params = pattern.extractor(match);
         
