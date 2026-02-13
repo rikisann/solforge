@@ -64,7 +64,7 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
     // Transform buy/sell params to swap params for DEX protocols
     let finalParams = { ...parsedIntent.params };
     if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
-        ['jupiter', 'raydium', 'orca', 'meteora'].includes(parsedIntent.protocol)) {
+        ['jupiter', 'raydium', 'orca', 'meteora', 'pumpfun'].includes(parsedIntent.protocol)) {
       const solMint = 'So11111111111111111111111111111111111111112';
       if (parsedIntent.action === 'buy') {
         finalParams = {
@@ -96,25 +96,44 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       skipSimulation: (req.body as any).skipSimulation
     };
 
-    // Special handling for Jupiter swaps (they return complete transactions)
-    if (parsedIntent.protocol === 'jupiter') {
+    // Route all swap/buy/sell operations through Jupiter API for real executable transactions.
+    // Individual DEX handlers (Raydium, Orca, Meteora, etc.) build instruction-level transactions
+    // but lack real on-chain account resolution. Jupiter aggregates all DEXes and returns
+    // fully constructed, simulation-ready transactions.
+    const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action) ||
+      resolvedIntent.includes('swap');
+    
+    if (isSwapAction && finalParams.from && finalParams.to) {
       try {
         const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
-        const transaction = await jupiterProtocol.buildSwapTransaction(buildIntent);
+        const jupiterIntent = {
+          ...buildIntent,
+          params: {
+            from: finalParams.from,
+            to: finalParams.to,
+            amount: finalParams.amount,
+            slippage: finalParams.slippage || 1.0,
+          }
+        };
+        const transaction = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
         
         res.json({
           success: true,
           transaction,
           details: {
             protocol: 'jupiter',
+            resolvedDex: parsedIntent.protocol, // Show which DEX was identified
             parsedIntent: parsedIntent,
-            confidence: parsedIntent.confidence
+            confidence: parsedIntent.confidence,
+            note: parsedIntent.protocol !== 'jupiter' 
+              ? `Token identified on ${parsedIntent.protocol} via DexScreener. Routed through Jupiter for optimal execution.`
+              : undefined
           }
         });
         return;
       } catch (jupiterError) {
         // Fall back to regular transaction building if Jupiter fails
-        console.warn('Jupiter direct build failed, falling back:', jupiterError);
+        console.warn('Jupiter routing failed, falling back to direct protocol handler:', jupiterError);
       }
     }
 
