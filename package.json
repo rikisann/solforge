@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
+    "@kamino-finance/klend-sdk": "^7.3.18",
     "@modelcontextprotocol/sdk": "^1.26.0",
     "@solana/spl-token": "^0.4.1",
     "@solana/web3.js": "^1.87.6",

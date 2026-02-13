@@ -1,378 +1,142 @@
 import { 
   TransactionInstruction, 
   PublicKey, 
-  SystemProgram 
 } from '@solana/web3.js';
-import { 
-  getAssociatedTokenAddress,
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID
-} from '@solana/spl-token';
 import { BuildIntent, ProtocolHandler } from '../utils/types';
-import { AccountResolver } from '../engine/resolver';
-import { resolveMint } from '../utils/connection';
-import { Buffer } from 'buffer';
-
-interface KaminoSupplyParams {
-  amount: bigint;
-}
-
-interface KaminoBorrowParams {
-  amount: bigint;
-}
-
-interface KaminoRepayParams {
-  amount: bigint;
-}
-
-interface KaminoWithdrawParams {
-  amount: bigint;
-}
+import { resolveMint, RPCConnection } from '../utils/connection';
 
 export class KaminoProtocol implements ProtocolHandler {
   name = 'kamino';
   description = 'Kamino lending protocol for supply, borrow, repay, and withdraw operations';
   supportedIntents = [
-    'supply', 
-    'deposit', 
-    'lend', 
-    'borrow', 
-    'repay', 
-    'withdraw',
-    'kamino-supply',
-    'kamino-deposit',
-    'kamino-borrow',
-    'kamino-repay',
-    'kamino-withdraw'
+    'supply', 'deposit', 'lend', 'borrow', 'repay', 'withdraw',
+    'kamino-supply', 'kamino-deposit', 'kamino-borrow', 'kamino-repay', 'kamino-withdraw'
   ];
 
-  readonly PROGRAM_ID = new PublicKey('KLend2g3cP87ber8TAJASBTig4PDior61Ccqb6XK6X1');
-  
-  // Instruction discriminators (8-byte identifiers for each instruction)
-  readonly SUPPLY_DISCRIMINATOR = Buffer.from([0, 0, 0, 0, 0, 0, 0, 1]);
-  readonly BORROW_DISCRIMINATOR = Buffer.from([0, 0, 0, 0, 0, 0, 0, 2]);
-  readonly REPAY_DISCRIMINATOR = Buffer.from([0, 0, 0, 0, 0, 0, 0, 3]);
-  readonly WITHDRAW_DISCRIMINATOR = Buffer.from([0, 0, 0, 0, 0, 0, 0, 4]);
+  private static marketCache: any = null;
+  private static marketCacheTime = 0;
+  private static readonly CACHE_TTL = 60000; // 1 min
 
   async build(intent: BuildIntent): Promise<TransactionInstruction[]> {
-    const { params } = intent;
     const action = intent.intent;
-
     switch (action) {
-      case 'supply':
-      case 'deposit':
-      case 'lend':
-      case 'kamino-supply':
-      case 'kamino-deposit':
-        return this.buildSupply(params, intent);
-        
-      case 'borrow':
-      case 'kamino-borrow':
-        return this.buildBorrow(params, intent);
-        
-      case 'repay':
-      case 'kamino-repay':
-        return this.buildRepay(params, intent);
-        
-      case 'withdraw':
-      case 'kamino-withdraw':
-        return this.buildWithdraw(params, intent);
-        
+      case 'supply': case 'deposit': case 'lend': case 'kamino-supply': case 'kamino-deposit':
+        return this.buildWithSDK(intent, 'deposit');
+      case 'borrow': case 'kamino-borrow':
+        return this.buildWithSDK(intent, 'borrow');
+      case 'repay': case 'kamino-repay':
+        return this.buildWithSDK(intent, 'repay');
+      case 'withdraw': case 'kamino-withdraw':
+        return this.buildWithSDK(intent, 'withdraw');
       default:
         throw new Error(`Unsupported Kamino action: ${action}`);
     }
   }
 
   validateParams(params: Record<string, any>): boolean {
-    // All actions require an amount and token
-    if (typeof params.amount !== 'number' || params.amount <= 0) {
-      return false;
-    }
-    
-    if (!params.token || typeof params.token !== 'string') {
-      return false;
-    }
-
+    if (typeof params.amount !== 'number' || params.amount <= 0) return false;
+    if (!params.token || typeof params.token !== 'string') return false;
     return true;
   }
 
-  private async buildSupply(
-    params: Record<string, any>,
-    intent: BuildIntent
-  ): Promise<TransactionInstruction[]> {
-    const payer = AccountResolver.resolvePublicKey(intent.payer);
-    const amount = params.amount;
-    const tokenMint = AccountResolver.resolvePublicKey(resolveMint(params.token));
-
-    // Get decimals for the token to convert amount properly
-    const decimals = await this.getTokenDecimals(tokenMint, intent.network || 'devnet');
-    const adjustedAmount = BigInt(Math.floor(amount * Math.pow(10, decimals)));
-
-    if (adjustedAmount <= 0n) {
-      throw new Error('Supply amount must be positive');
-    }
-
-    // Generate PDAs for Kamino lending pool
-    const [lendingMarket] = this.getLendingMarketAddress();
-    const [reserve] = this.getReserveAddress(tokenMint, lendingMarket);
-    const [collateralMint] = this.getCollateralMintAddress(reserve);
-
-    // User's token account and collateral account
-    const userTokenAccount = await getAssociatedTokenAddress(tokenMint, payer);
-    const userCollateralAccount = await getAssociatedTokenAddress(collateralMint, payer);
-
-    // Reserve token account (where the actual tokens go)
-    const [reserveTokenAccount] = this.getReserveTokenAccountAddress(reserve);
-
-    const data = Buffer.concat([
-      this.SUPPLY_DISCRIMINATOR,
-      this.encodeSupplyParams({ amount: adjustedAmount })
-    ]);
-
-    return [
-      new TransactionInstruction({
-        keys: [
-          { pubkey: lendingMarket, isSigner: false, isWritable: false },
-          { pubkey: reserve, isSigner: false, isWritable: true },
-          { pubkey: userTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: userCollateralAccount, isSigner: false, isWritable: true },
-          { pubkey: reserveTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: collateralMint, isSigner: false, isWritable: true },
-          { pubkey: payer, isSigner: true, isWritable: false },
-          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        ],
-        programId: this.PROGRAM_ID,
-        data
-      })
-    ];
-  }
-
-  private async buildBorrow(
-    params: Record<string, any>,
-    intent: BuildIntent
-  ): Promise<TransactionInstruction[]> {
-    const payer = AccountResolver.resolvePublicKey(intent.payer);
-    const amount = params.amount;
-    const tokenMint = AccountResolver.resolvePublicKey(resolveMint(params.token));
-
-    const decimals = await this.getTokenDecimals(tokenMint, intent.network || 'devnet');
-    const adjustedAmount = BigInt(Math.floor(amount * Math.pow(10, decimals)));
-
-    if (adjustedAmount <= 0n) {
-      throw new Error('Borrow amount must be positive');
-    }
-
-    const [lendingMarket] = this.getLendingMarketAddress();
-    const [reserve] = this.getReserveAddress(tokenMint, lendingMarket);
-    const [obligationAccount] = this.getObligationAddress(payer, lendingMarket);
-
-    const userTokenAccount = await getAssociatedTokenAddress(tokenMint, payer);
-    const [reserveTokenAccount] = this.getReserveTokenAccountAddress(reserve);
-
-    const data = Buffer.concat([
-      this.BORROW_DISCRIMINATOR,
-      this.encodeBorrowParams({ amount: adjustedAmount })
-    ]);
-
-    return [
-      new TransactionInstruction({
-        keys: [
-          { pubkey: lendingMarket, isSigner: false, isWritable: false },
-          { pubkey: reserve, isSigner: false, isWritable: true },
-          { pubkey: obligationAccount, isSigner: false, isWritable: true },
-          { pubkey: userTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: reserveTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: payer, isSigner: true, isWritable: false },
-          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        ],
-        programId: this.PROGRAM_ID,
-        data
-      })
-    ];
-  }
-
-  private async buildRepay(
-    params: Record<string, any>,
-    intent: BuildIntent
-  ): Promise<TransactionInstruction[]> {
-    const payer = AccountResolver.resolvePublicKey(intent.payer);
-    const amount = params.amount;
-    const tokenMint = AccountResolver.resolvePublicKey(resolveMint(params.token));
-
-    const decimals = await this.getTokenDecimals(tokenMint, intent.network || 'devnet');
-    const adjustedAmount = BigInt(Math.floor(amount * Math.pow(10, decimals)));
-
-    if (adjustedAmount <= 0n) {
-      throw new Error('Repay amount must be positive');
-    }
-
-    const [lendingMarket] = this.getLendingMarketAddress();
-    const [reserve] = this.getReserveAddress(tokenMint, lendingMarket);
-    const [obligationAccount] = this.getObligationAddress(payer, lendingMarket);
-
-    const userTokenAccount = await getAssociatedTokenAddress(tokenMint, payer);
-    const [reserveTokenAccount] = this.getReserveTokenAccountAddress(reserve);
-
-    const data = Buffer.concat([
-      this.REPAY_DISCRIMINATOR,
-      this.encodeRepayParams({ amount: adjustedAmount })
-    ]);
-
-    return [
-      new TransactionInstruction({
-        keys: [
-          { pubkey: lendingMarket, isSigner: false, isWritable: false },
-          { pubkey: reserve, isSigner: false, isWritable: true },
-          { pubkey: obligationAccount, isSigner: false, isWritable: true },
-          { pubkey: userTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: reserveTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: payer, isSigner: true, isWritable: false },
-          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        ],
-        programId: this.PROGRAM_ID,
-        data
-      })
-    ];
-  }
-
-  private async buildWithdraw(
-    params: Record<string, any>,
-    intent: BuildIntent
-  ): Promise<TransactionInstruction[]> {
-    const payer = AccountResolver.resolvePublicKey(intent.payer);
-    const amount = params.amount;
-    const tokenMint = AccountResolver.resolvePublicKey(resolveMint(params.token));
-
-    const decimals = await this.getTokenDecimals(tokenMint, intent.network || 'devnet');
-    const adjustedAmount = BigInt(Math.floor(amount * Math.pow(10, decimals)));
-
-    if (adjustedAmount <= 0n) {
-      throw new Error('Withdraw amount must be positive');
-    }
-
-    const [lendingMarket] = this.getLendingMarketAddress();
-    const [reserve] = this.getReserveAddress(tokenMint, lendingMarket);
-    const [collateralMint] = this.getCollateralMintAddress(reserve);
-
-    const userTokenAccount = await getAssociatedTokenAddress(tokenMint, payer);
-    const userCollateralAccount = await getAssociatedTokenAddress(collateralMint, payer);
-    const [reserveTokenAccount] = this.getReserveTokenAccountAddress(reserve);
-
-    const data = Buffer.concat([
-      this.WITHDRAW_DISCRIMINATOR,
-      this.encodeWithdrawParams({ amount: adjustedAmount })
-    ]);
-
-    return [
-      new TransactionInstruction({
-        keys: [
-          { pubkey: lendingMarket, isSigner: false, isWritable: false },
-          { pubkey: reserve, isSigner: false, isWritable: true },
-          { pubkey: userTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: userCollateralAccount, isSigner: false, isWritable: true },
-          { pubkey: reserveTokenAccount, isSigner: false, isWritable: true },
-          { pubkey: collateralMint, isSigner: false, isWritable: true },
-          { pubkey: payer, isSigner: true, isWritable: false },
-          { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        ],
-        programId: this.PROGRAM_ID,
-        data
-      })
-    ];
-  }
-
-  // Encoding methods for instruction data
-  private encodeSupplyParams(params: KaminoSupplyParams): Buffer {
-    const buffer = Buffer.alloc(8);
-    buffer.writeBigUInt64LE(params.amount, 0);
-    return buffer;
-  }
-
-  private encodeBorrowParams(params: KaminoBorrowParams): Buffer {
-    const buffer = Buffer.alloc(8);
-    buffer.writeBigUInt64LE(params.amount, 0);
-    return buffer;
-  }
-
-  private encodeRepayParams(params: KaminoRepayParams): Buffer {
-    const buffer = Buffer.alloc(8);
-    buffer.writeBigUInt64LE(params.amount, 0);
-    return buffer;
-  }
-
-  private encodeWithdrawParams(params: KaminoWithdrawParams): Buffer {
-    const buffer = Buffer.alloc(8);
-    buffer.writeBigUInt64LE(params.amount, 0);
-    return buffer;
-  }
-
-  // PDA generation methods
-  private getLendingMarketAddress(): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('LendingMarket')],
-      this.PROGRAM_ID
-    );
-  }
-
-  private getReserveAddress(tokenMint: PublicKey, lendingMarket: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('Reserve'), tokenMint.toBuffer(), lendingMarket.toBuffer()],
-      this.PROGRAM_ID
-    );
-  }
-
-  private getCollateralMintAddress(reserve: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('CollateralMint'), reserve.toBuffer()],
-      this.PROGRAM_ID
-    );
-  }
-
-  private getReserveTokenAccountAddress(reserve: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('ReserveTokenAccount'), reserve.toBuffer()],
-      this.PROGRAM_ID
-    );
-  }
-
-  private getObligationAddress(owner: PublicKey, lendingMarket: PublicKey): [PublicKey, number] {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('Obligation'), owner.toBuffer(), lendingMarket.toBuffer()],
-      this.PROGRAM_ID
-    );
-  }
-
-  // Helper method to get token decimals
-  private async getTokenDecimals(mint: PublicKey, network: 'mainnet' | 'devnet'): Promise<number> {
-    try {
-      const connection = require('../utils/connection').RPCConnection.getConnection(network);
-      const mintInfo = await connection.getParsedAccountInfo(mint);
-      
-      if (mintInfo.value?.data && 'parsed' in mintInfo.value.data) {
-        return mintInfo.value.data.parsed.info.decimals;
-      }
-    } catch (error) {
-      console.warn(`Could not get decimals for mint ${mint.toString()}, defaulting to 6`);
+  private async getMarket() {
+    const now = Date.now();
+    if (KaminoProtocol.marketCache && (now - KaminoProtocol.marketCacheTime) < KaminoProtocol.CACHE_TTL) {
+      return KaminoProtocol.marketCache;
     }
     
-    // Default to 6 decimals for most tokens
-    return 6;
+    const { createSolanaRpc } = require('@solana/kit');
+    const { KaminoMarket } = require('@kamino-finance/klend-sdk');
+    
+    const rpcUrl = process.env.SOLANA_MAINNET_RPC || 'https://api.mainnet-beta.solana.com';
+    const rpc = createSolanaRpc(rpcUrl);
+    
+    const market = await KaminoMarket.load(rpc, '7u3HeHxYDLhnCoErrtycNokbQYbWGzLs6JSDqGAv5PfF', 400);
+    KaminoProtocol.marketCache = { market, rpc };
+    KaminoProtocol.marketCacheTime = now;
+    return { market, rpc };
+  }
+
+  private async buildWithSDK(intent: BuildIntent, action: 'deposit' | 'borrow' | 'repay' | 'withdraw'): Promise<TransactionInstruction[]> {
+    const { address, createNoopSigner } = require('@solana/kit');
+    const { KaminoAction, VanillaObligation, PROGRAM_ID } = require('@kamino-finance/klend-sdk');
+    const BN = require('bn.js');
+
+    const { market, rpc } = await this.getMarket();
+    
+    const tokenMint = address(resolveMint(intent.params.token));
+    const payerAddr = address(intent.payer);
+    const owner = createNoopSigner(payerAddr);
+    const obligation = new VanillaObligation(PROGRAM_ID);
+    const slot = await rpc.getSlot().send();
+
+    // Get token decimals
+    const connection = RPCConnection.getConnection('mainnet');
+    const mintPk = new PublicKey(resolveMint(intent.params.token));
+    const mintInfo = await connection.getParsedAccountInfo(mintPk);
+    let decimals = 6;
+    if (mintInfo.value?.data && 'parsed' in mintInfo.value.data) {
+      decimals = mintInfo.value.data.parsed.info.decimals;
+    }
+    const amountBN = new BN(Math.floor(intent.params.amount * Math.pow(10, decimals)));
+
+    let kaminoAction: any;
+    const commonArgs = [
+      market, amountBN, tokenMint, owner, obligation,
+      false, // useV2Ixs
+      undefined, // scopeRefreshConfig
+      1_400_000, // extraComputeBudget
+      true, // includeAtaIxs
+      false, // requestElevationGroup
+      { skipInitialization: false, skipLutCreation: true },
+      undefined, // referrer
+      slot,
+    ] as const;
+
+    switch (action) {
+      case 'deposit':
+        kaminoAction = await KaminoAction.buildDepositTxns(...commonArgs);
+        break;
+      case 'borrow':
+        kaminoAction = await KaminoAction.buildBorrowTxns(...commonArgs);
+        break;
+      case 'repay':
+        kaminoAction = await KaminoAction.buildRepayTxns(...commonArgs);
+        break;
+      case 'withdraw':
+        kaminoAction = await KaminoAction.buildWithdrawTxns(...commonArgs);
+        break;
+    }
+
+    // Convert @solana/kit instructions to @solana/web3.js TransactionInstructions
+    const convertIx = (ix: any): TransactionInstruction => {
+      return new TransactionInstruction({
+        programId: new PublicKey(ix.programAddress.toString()),
+        keys: (ix.accounts || []).map((acc: any) => ({
+          pubkey: new PublicKey(acc.address.toString()),
+          isSigner: acc.role === 2 || acc.role === 3,
+          isWritable: acc.role === 1 || acc.role === 3,
+        })),
+        data: Buffer.from(ix.data || []),
+      });
+    };
+
+    const allIxs: TransactionInstruction[] = [];
+    if (kaminoAction.setupIxs) allIxs.push(...kaminoAction.setupIxs.map(convertIx));
+    if (kaminoAction.lendingIxs) allIxs.push(...kaminoAction.lendingIxs.map(convertIx));
+    if (kaminoAction.cleanupIxs) allIxs.push(...kaminoAction.cleanupIxs.map(convertIx));
+
+    if (allIxs.length === 0) {
+      throw new Error('Kamino SDK returned no instructions');
+    }
+
+    // Store the market's lookup table for the builder
+    (intent as any)._lookupTables = ['FGMSBiyVE8TvZcdQnZETAAKw28tkQJ2ccZy6pyp95URb'];
+
+    return allIxs;
   }
 
   getRequiredAccounts(params: Record<string, any>): PublicKey[] {
-    const accounts: PublicKey[] = [];
-    
-    if (params.token) {
-      const tokenMint = AccountResolver.resolvePublicKey(resolveMint(params.token));
-      accounts.push(tokenMint);
-      
-      const [lendingMarket] = this.getLendingMarketAddress();
-      accounts.push(lendingMarket);
-      
-      const [reserve] = this.getReserveAddress(tokenMint, lendingMarket);
-      accounts.push(reserve);
-    }
-    
-    return accounts;
+    return [];
   }
 }
