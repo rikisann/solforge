@@ -1,639 +1,375 @@
-# SolForge 🔥
+# SolForge ⚡
 
-**Any protocol. Any instruction. One API.**
+**Natural Language → Solana Transactions**
 
-*The universal Solana transaction builder that transforms natural language and structured intents into perfectly constructed, simulated transactions across 12+ protocols.*
+SolForge is a universal transaction builder API for Solana. Describe what you want in plain English — or use structured intents — and get back a fully constructed, ready-to-sign transaction. No SDKs, no protocol-specific code, no headaches.
 
----
+> 🏆 Built entirely by AI agents for the [Colosseum Agent Hackathon](https://www.colosseum.org/)
 
-## 🎯 The Problem
-
-AI agents and developers constantly reinvent the wheel when integrating with Solana protocols. Each protocol has different SDKs, patterns, and quirks. A Jupiter swap looks nothing like a Pump.fun trade or a Marinade stake. This creates:
-
-- **Fragmented codebases** - Every agent rebuilds protocol integrations from scratch
-- **Inconsistent UX** - Different APIs mean different error handling and response formats  
-- **Maintenance hell** - Protocol updates break agent integrations across the ecosystem
-- **Wasted developer time** - Why should every agent rebuild Jupiter integration?
-
-**SolForge solves this.** One API. Any protocol. Perfect transactions.
+**[Live Demo](https://solforge.dev)** · **[API Docs](#api-reference)** · **[GitHub](https://github.com/rikisann/solforge)**
 
 ---
 
-## ✅ Supported Protocols (12 Complete)
+## Why SolForge?
 
-| Protocol | Operations | Program ID |
-|----------|------------|------------|
-| ✅ **System Program** | SOL transfers, account creation | `11111111111111111111111111111112` |
-| ✅ **SPL Token** | Token transfers, ATA management, account closing | `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` |
-| ✅ **Jupiter** | Optimal swap routing via Jupiter API | `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4` |
-| ✅ **Memo** | On-chain messages | `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr` |
-| ✅ **Jito** | MEV protection tips | `Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY` |
-| ✅ **Raydium AMM** | Swaps with specific pools | `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8` |
-| ✅ **Pump.fun** | Token bonding curves (buy/sell/create) | `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P` |
-| ✅ **Orca Whirlpool** | Concentrated liquidity positions | `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc` |
-| ✅ **Marinade** | Liquid staking (mSOL) | `8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC` |
-| ✅ **Meteora DLMM** | Dynamic liquidity market making | `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo` |
-| ✅ **Token-2022** | Next-gen token standard | `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb` |
-| ✅ **Stake Program** | Native SOL staking operations | `Stake11111111111111111111111111111111111111` |
+Every Solana app rebuilds the same integrations. Jupiter swap? Different SDK. Marinade stake? Different pattern. Pump.fun buy? Different everything. Each protocol has its own quirks, its own transaction format, its own error codes.
+
+**SolForge eliminates this entirely.**
+
+One API call. Any protocol. Any operation. You describe what you want, SolForge figures out the rest.
+
+### For AI Agents
+AI agents shouldn't need to know the difference between Orca and Raydium. They should say *"swap 5 SOL for BONK"* and get a transaction back. SolForge is the **knowledge layer** between AI agents and the Solana blockchain — it knows 12+ protocol IDLs so your agent doesn't have to.
+
+### For Developers
+Stop importing 15 different SDKs. SolForge gives you one consistent API with structured intents, natural language support, and real-time protocol resolution. Build your app, not your infrastructure.
+
+### For Traders
+Connect your wallet, type what you want, click send. The demo page lets you execute real mainnet transactions from plain English commands.
 
 ---
 
-## 🚀 Quick Start
+## The Tech Behind It
+
+### 🧠 Intelligent NLP Parser
+SolForge doesn't use an LLM to parse your prompts — it uses a hand-crafted regex-based intent parser that extracts actions, amounts, tokens, protocols, and parameters from natural language in **under 1ms**. No API calls, no latency, no hallucinations.
+
+Understands degen speak:
+- *"ape 2 SOL into BONK"* → swap via Jupiter
+- *"dump my WIF"* → sell via Jupiter  
+- *"liquid stake 10 SOL"* → Marinade deposit
+
+### 🔍 DexScreener Token Resolution
+When you mention a token by address or name, SolForge queries DexScreener to identify:
+- Which DEX has the most liquidity for that token
+- The token's mint address, symbol, and price
+- Whether it's a pair address or token address
+
+This means you can paste a random pump.fun token address and SolForge automatically knows it trades on Raydium, Meteora, or wherever it has the most liquidity.
+
+### 🪐 Jupiter Aggregation
+All swap operations route through Jupiter's aggregator API for optimal execution. Even if DexScreener identifies a token on Orca, the actual transaction is built by Jupiter — which finds the best route across ALL DEXes, splits orders, and returns a fully constructed transaction ready to sign.
+
+### 🏗️ Protocol Engine Architecture
+Under the hood, SolForge uses a **decoder registry pattern**:
+- Each of the 12+ protocols is a self-contained handler implementing a common interface
+- The `ProtocolRegistry` discovers and loads handlers at startup
+- The `TransactionBuilder` orchestrates handler selection, instruction building, compute budget, priority fees, and simulation
+- The `IntentParser` maps natural language to structured intents with protocol/action/params
+
+```
+User Prompt → IntentParser → DexScreener Resolution → Jupiter/Protocol Handler → Transaction Builder → Signed Transaction
+```
+
+### 🔐 Wallet Integration
+The demo page includes full Phantom/Solflare wallet integration:
+1. Build transaction from natural language
+2. Fresh blockhash injected right before signing (no expiration issues)
+3. Sign with your wallet
+4. Send to mainnet via RPC proxy (API keys stay server-side)
+5. View on Solscan
+
+---
+
+## Supported Protocols
+
+| Protocol | Operations | What It Does |
+|----------|-----------|--------------|
+| **Jupiter** | swap | Optimal swap routing across all DEXes |
+| **Raydium** | swap | AMM swaps with specific pools |
+| **Orca** | swap | Concentrated liquidity swaps |
+| **Meteora** | swap | Dynamic liquidity market making |
+| **Pump.fun** | buy, sell, create | Bonding curve token trading |
+| **Marinade** | stake, unstake | Liquid staking (SOL → mSOL) |
+| **System** | transfer | Native SOL transfers |
+| **SPL Token** | transfer, create-ata, close | Token operations |
+| **Token-2022** | transfer | Next-gen token standard |
+| **Memo** | memo | On-chain messages |
+| **Jito** | tip | MEV protection tips |
+| **Stake** | stake, delegate, deactivate, withdraw | Native SOL staking |
+
+---
+
+## Quick Start
 
 ### Installation
 
 ```bash
-git clone https://github.com/your-org/solforge.git
+git clone https://github.com/rikisann/solforge.git
 cd solforge
 npm install
 cp .env.example .env
 ```
 
-### Environment Setup
+### Configuration
 
 ```bash
 # .env
-PORT=3000
-NODE_ENV=development
-SOLANA_DEVNET_RPC=https://api.devnet.solana.com
-SOLANA_MAINNET_RPC=https://api.mainnet-beta.solana.com
-HELIUS_API_KEY=your_helius_key_here
-DEFAULT_NETWORK=devnet
-JUPITER_API_URL=https://quote-api.jup.ag/v6
+PORT=3001
+DEFAULT_NETWORK=mainnet
+SOLANA_MAINNET_RPC=https://api.mainnet-beta.solana.com  # or your Helius/QuickNode URL
+JUPITER_API_URL=https://lite-api.jup.ag/swap/v1
 ```
 
-### Start Development Server
+### Run
 
-```bash
-npm run dev
-```
-
-API available at `http://localhost:3000`
-
----
-
-## 📚 API Reference
-
-### Core Endpoints
-
-#### Health Check
-```bash
-GET /health
-```
-
-#### Build Transaction (Structured Intent)
-```bash
-POST /api/build
-
-{
-  "intent": "transfer",
-  "params": {
-    "amount": 0.1,
-    "to": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-  },
-  "payer": "your_wallet_address",
-  "network": "devnet"
-}
-```
-
-#### Build Transaction (Natural Language)
-```bash
-POST /api/build/natural
-
-{
-  "prompt": "swap 1 SOL for USDC with 0.5% slippage",
-  "payer": "your_wallet_address"
-}
-```
-
-#### Get All Protocols
-```bash
-GET /api/protocols
-```
-
-#### Get Protocol Details
-```bash
-GET /api/protocols/jupiter
-```
-
-#### Get Protocol Schema (NEW!)
-```bash
-GET /api/protocols/jupiter/schema
-```
-
-#### Get Comprehensive Documentation (NEW!)
-```bash
-GET /api/docs
-```
-
-#### Get Natural Language Examples
-```bash
-GET /api/examples
-```
-
-#### Get Jupiter Quote
-```bash
-POST /api/quote
-
-{
-  "from": "SOL",
-  "to": "USDC", 
-  "amount": 1.0,
-  "slippage": 0.5
-}
-```
-
----
-
-## 🔧 Protocol Reference
-
-### System Program
-**Program ID:** `11111111111111111111111111111112`
-
-#### transfer
-- **Required:** `amount` (number, SOL), `to` (string, pubkey)
-- **Optional:** None
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "transfer",
-    "params": { "amount": 0.1, "to": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU" },
-    "payer": "your_wallet_address"
-  }'
-```
-
-#### create-account
-- **Required:** `space` (number), `lamports` (number), `programId` (string)
-- **Optional:** None
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "create-account",
-    "params": { "space": 165, "lamports": 2039280, "programId": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
-    "payer": "your_wallet_address"
-  }'
-```
-
----
-
-### SPL Token
-**Program ID:** `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
-
-#### token-transfer
-- **Required:** `amount` (number), `token` (string, symbol or mint), `to` (string, pubkey)
-- **Optional:** None
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "token-transfer",
-    "params": { "amount": 100, "token": "USDC", "to": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU" },
-    "payer": "your_wallet_address"
-  }'
-```
-
-#### create-ata
-- **Required:** `token` (string, symbol or mint)
-- **Optional:** `owner` (string, pubkey, defaults to payer)
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "create-ata",
-    "params": { "token": "USDC" },
-    "payer": "your_wallet_address"
-  }'
-```
-
-#### close-account
-- **Required:** `token` (string, symbol or mint)
-- **Optional:** None
-
----
-
-### Jupiter
-**Program ID:** `JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4`
-
-#### swap
-- **Required:** `from` (string, symbol), `to` (string, symbol), `amount` (number)
-- **Optional:** `slippage` (number, default 0.5%)
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "swap",
-    "params": { "from": "SOL", "to": "USDC", "amount": 1.0, "slippage": 0.5 },
-    "payer": "your_wallet_address"
-  }'
-```
-
----
-
-### Memo
-**Program ID:** `MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr`
-
-#### memo
-- **Required:** `message` (string)
-- **Optional:** None
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "memo",
-    "params": { "message": "Hello Solana!" },
-    "payer": "your_wallet_address"
-  }'
-```
-
----
-
-### Jito
-**Program ID:** `Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY`
-
-#### tip
-- **Required:** None
-- **Optional:** `amount` (number, SOL, default 0.001)
-
-```bash
-curl -X POST http://localhost:3000/api/build \
-  -H "Content-Type: application/json" \
-  -d '{
-    "intent": "tip",
-    "params": { "amount": 0.001 },
-    "payer": "your_wallet_address"
-  }'
-```
-
----
-
-### Raydium AMM
-**Program ID:** `675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8`
-
-#### raydium-swap
-- **Required:** `from` (string), `to` (string), `amount` (number)
-- **Optional:** `pool` (string, pool address), `slippage` (number)
-
----
-
-### Pump.fun
-**Program ID:** `6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P`
-
-#### pumpfun-buy
-- **Required:** `token` (string, mint), `amount` (number, SOL)
-- **Optional:** `slippage` (number)
-
-#### pumpfun-sell
-- **Required:** `token` (string, mint), `amount` (number, tokens)
-- **Optional:** `slippage` (number)
-
-#### pumpfun-create
-- **Required:** `name` (string), `symbol` (string), `uri` (string)
-- **Optional:** None
-
----
-
-### Orca Whirlpool
-**Program ID:** `whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc`
-
-#### orca-swap
-- **Required:** `from` (string), `to` (string), `amount` (number)
-- **Optional:** `pool` (string), `slippage` (number)
-
-#### orca-open-position
-- **Required:** `pool` (string), `lowerPrice` (number), `upperPrice` (number), `liquidity` (number)
-- **Optional:** None
-
-#### orca-close-position
-- **Required:** `position` (string, position address)
-- **Optional:** None
-
----
-
-### Marinade
-**Program ID:** `8szGkuLTAux9XMgZ2vtY39jVSowEcpBfFfD8hXSEqdGC`
-
-#### marinade-stake
-- **Required:** `amount` (number, SOL)
-- **Optional:** None
-
-#### marinade-unstake
-- **Required:** `amount` (number, mSOL)
-- **Optional:** None
-
----
-
-### Meteora DLMM
-**Program ID:** `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`
-
-#### meteora-swap
-- **Required:** `from` (string), `to` (string), `amount` (number)
-- **Optional:** `pool` (string), `slippage` (number)
-
-#### meteora-add-liquidity
-- **Required:** `pool` (string), `amount` (number)
-- **Optional:** None
-
-#### meteora-remove-liquidity
-- **Required:** `pool` (string), `amount` (number)
-- **Optional:** None
-
----
-
-### Token-2022
-**Program ID:** `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`
-
-#### token2022-transfer
-- **Required:** `amount` (number), `token` (string, mint), `to` (string, pubkey)
-- **Optional:** None
-
-#### token2022-create-ata
-- **Required:** `token` (string, mint)
-- **Optional:** None
-
----
-
-### Stake Program
-**Program ID:** `Stake11111111111111111111111111111111111111`
-
-#### stake
-- **Required:** `amount` (number, SOL)
-- **Optional:** `validator` (string, vote account pubkey)
-
-#### delegate
-- **Required:** `stakeAccount` (string), `validator` (string)
-- **Optional:** None
-
-#### deactivate
-- **Required:** `stakeAccount` (string)
-- **Optional:** None
-
-#### withdraw
-- **Required:** `stakeAccount` (string), `amount` (number)
-- **Optional:** `destination` (string, pubkey)
-
----
-
-## 💬 Natural Language Examples
-
-SolForge understands natural language and converts it to structured transactions:
-
-1. **"transfer 0.1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"**
-   → System Program transfer
-
-2. **"swap 1 SOL for USDC with 0.5% slippage"**
-   → Jupiter swap with slippage control
-
-3. **"send 100 USDC to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"**
-   → SPL Token transfer
-
-4. **"memo \"Payment for services rendered\""**
-   → On-chain memo instruction
-
-5. **"stake 2 SOL with validator ValidatorVoteAccount123"**
-   → Native staking with specific validator
-
-6. **"tip 0.005 SOL for MEV protection"**
-   → Jito tip for transaction priority
-
-7. **"buy 1 SOL worth of BONK on pump.fun"**
-   → Pump.fun token purchase
-
-8. **"create ATA for USDC token"**
-   → Associated Token Account creation
-
-9. **"unstake 1.5 mSOL from marinade"**
-   → Marinade liquid unstaking
-
-10. **"add 1000 USDC liquidity to meteora pool PoolAddress123"**
-    → Meteora DLMM liquidity provision
-
-11. **"close my USDT token account"**
-    → SPL Token account closing
-
-12. **"open orca position from 95 to 105 with 500 liquidity"**
-    → Orca Whirlpool concentrated liquidity
-
-13. **"delegate stake account StakeAccount123 to ValidatorVote456"**
-    → Stake program delegation
-
-14. **"swap SOL to USDC on raydium with 1% slippage"**
-    → Raydium AMM-specific swap
-
-15. **"withdraw 0.5 SOL from stake account StakeAccount789"**
-    → Stake withdrawal operation
-
-16. **"create pump.fun token called 'MyCoin' symbol 'COIN' with metadata https://meta.uri"**
-    → Token creation on bonding curve
-
-17. **"transfer 50 tokens of mint TokenMint123 using token2022"**
-    → Token-2022 program transfer
-
-18. **"get quote for swapping 5 SOL to USDC"**
-    → Jupiter quote request (no transaction)
-
----
-
-## 🏗️ Architecture
-
-```
-src/
-├── engine/
-│   ├── builder.ts       # Core transaction builder
-│   ├── simulator.ts     # RPC simulation engine
-│   ├── resolver.ts      # Account/PDA resolution
-│   └── intent-parser.ts # Natural language → structured intent
-├── protocols/           # Protocol implementations (12 protocols)
-│   ├── system.ts        # SOL transfers & account creation
-│   ├── spl-token.ts     # Token operations & ATA management
-│   ├── jupiter.ts       # Swap routing via Jupiter API
-│   ├── memo.ts          # On-chain memos
-│   ├── jito.ts          # MEV tips
-│   ├── raydium.ts       # Raydium AMM swaps
-│   ├── pumpfun.ts       # Pump.fun bonding curves
-│   ├── orca.ts          # Orca Whirlpool concentrated liquidity
-│   ├── marinade.ts      # Liquid staking (mSOL)
-│   ├── meteora.ts       # Dynamic liquidity market making
-│   ├── token2022.ts     # Next-gen token standard
-│   └── stake.ts         # Native SOL staking
-├── api/
-│   ├── routes.ts        # HTTP endpoints & comprehensive documentation
-│   └── middleware.ts    # Error handling, validation, rate limiting
-└── utils/
-    ├── connection.ts    # Multi-network RPC connections
-    └── types.ts         # Shared interfaces & protocol handler
-```
-
-### Core Components
-
-- **TransactionBuilder**: Orchestrates protocol handlers and builds final transactions
-- **IntentParser**: Converts natural language to structured intents using pattern matching
-- **ProtocolRegistry**: Dynamic protocol handler registry with conflict resolution
-- **Simulator**: Pre-validates all transactions via RPC simulation
-- **AccountResolver**: Resolves addresses, PDAs, and validates account existence
-
----
-
-## 🔧 Extending SolForge
-
-Adding a new protocol is straightforward. Implement the `ProtocolHandler` interface:
-
-```typescript
-import { ProtocolHandler } from '../utils/types';
-
-export class YourProtocol implements ProtocolHandler {
-  name = 'your-protocol';
-  description = 'Description of your protocol';
-  supportedIntents = ['your-action', 'another-action'];
-
-  async build(intent: BuildIntent): Promise<TransactionInstruction[]> {
-    // Build transaction instructions
-  }
-
-  validateParams(params: Record<string, any>): boolean {
-    // Validate input parameters
-  }
-
-  getRequiredAccounts(params: Record<string, any>): PublicKey[] {
-    // Return required accounts for transaction
-  }
-}
-```
-
-Then register it in `src/protocols/index.ts`:
-
-```typescript
-import { YourProtocol } from './your-protocol';
-
-// In ProtocolRegistry static block
-this.register(new YourProtocol());
-```
-
-That's it! Your protocol is now available via:
-- Structured API: `POST /api/build`
-- Natural language: `POST /api/build/natural`  
-- Documentation: `GET /api/protocols/your-protocol`
-- Schema discovery: `GET /api/protocols/your-protocol/schema`
-
----
-
-## 🔐 Security & Reliability
-
-- **No Private Keys** - SolForge never handles private keys, only builds unsigned transactions
-- **Simulation First** - Every transaction is simulated before returning to catch errors early
-- **Input Validation** - Comprehensive parameter validation with type checking
-- **Rate Limiting** - Configurable rate limiting on all endpoints
-- **Error Handling** - Graceful error handling with detailed error messages
-- **CORS & Headers** - Security headers and CORS configured for production use
-
----
-
-## 🚀 Production Deployment
-
-### Build & Run
 ```bash
 npm run build
 npm start
 ```
 
-### Docker Deployment
+Server starts at `http://localhost:3001`. Visit in your browser for the interactive demo, or call the API directly.
+
+---
+
+## API Reference
+
+### `POST /api/build/natural` — The Star Endpoint ⭐
+
+Transform natural language into a Solana transaction. This is what makes SolForge special.
+
 ```bash
-docker build -t solforge .
-docker run -p 3000:3000 --env-file .env solforge
+curl -X POST http://localhost:3001/api/build/natural \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Swap 1 SOL for USDC",
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'
 ```
 
-### Environment Variables (Production)
+**Response:**
+```json
+{
+  "success": true,
+  "transaction": "AQAAAA...(base64 encoded, ready to sign)...",
+  "details": {
+    "protocol": "jupiter",
+    "parsedIntent": {
+      "protocol": "jupiter",
+      "action": "swap",
+      "params": { "from": "SOL", "to": "USDC", "amount": 1 },
+      "confidence": 0.95
+    },
+    "note": "Routed through Jupiter for optimal execution."
+  }
+}
+```
+
+**What it understands:**
+| Prompt | What Happens |
+|--------|-------------|
+| `"Ape 2 SOL into BONK"` | Swap via Jupiter, BONK resolved via DexScreener |
+| `"Convert 100 USDC to SOL with 0.5% slippage"` | Jupiter swap with custom slippage |
+| `"Liquid stake 10 SOL with Marinade"` | Marinade deposit |
+| `"Write onchain memo: gm from SolForge"` | Memo program |
+| `"Buy 1 SOL of pair ABC123..."` | DexScreener pair lookup → Jupiter swap |
+| `"Send 0.5 SOL to ADDRESS"` | System transfer |
+| `"Dump my WIF"` | Sell WIF for SOL via Jupiter |
+
+**Options:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `prompt` | string | Natural language description (required) |
+| `payer` | string | Wallet public key (required) |
+| `skipSimulation` | boolean | Skip RPC simulation (useful for demos without funded wallets) |
+| `network` | string | `"mainnet"` or `"devnet"` (default: mainnet) |
+| `priorityFee` | number | Priority fee in microlamports |
+| `computeBudget` | number | Compute unit limit |
+
+---
+
+### `POST /api/build` — Structured Intent Builder
+
+For programmatic use when you know exactly what you want.
+
 ```bash
-NODE_ENV=production
-SOLANA_MAINNET_RPC=https://your-premium-rpc-endpoint
-HELIUS_API_KEY=your_production_helius_key
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=1000
+curl -X POST http://localhost:3001/api/build \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": "swap",
+    "params": {
+      "from": "SOL",
+      "to": "USDC",
+      "amount": 1.0,
+      "slippage": 0.5
+    },
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'
+```
+
+**Available intents:** `transfer`, `token-transfer`, `swap`, `memo`, `tip`, `marinade-stake`, `marinade-unstake`, `raydium-swap`, `orca-swap`, `meteora-swap`, `pumpfun-buy`, `pumpfun-sell`, `stake`, `delegate`, `deactivate`, `withdraw`
+
+---
+
+### `POST /api/build/multi` — Batch Builder
+
+Combine multiple operations into one atomic transaction.
+
+```bash
+curl -X POST http://localhost:3001/api/build/multi \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intents": [
+      { "intent": "memo", "params": { "message": "batch tx" } },
+      { "intent": "transfer", "params": { "to": "ADDRESS", "amount": 0.01 } }
+    ],
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'
 ```
 
 ---
 
-## 📊 Response Format
+### `POST /api/decode` — Transaction Decoder
 
+Decode any base64 Solana transaction into human-readable format.
+
+```bash
+curl -X POST http://localhost:3001/api/decode \
+  -H "Content-Type: application/json" \
+  -d '{ "transaction": "AQAAAA..." }'
+```
+
+---
+
+### `POST /api/estimate` — Fee Estimator
+
+Estimate transaction costs before building.
+
+```bash
+curl -X POST http://localhost:3001/api/estimate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "intent": "transfer",
+    "params": { "to": "ADDRESS", "amount": 1.0 },
+    "payer": "YOUR_WALLET_ADDRESS"
+  }'
+```
+
+---
+
+### `GET /api/resolve?query=TOKEN` — Token/Pair Resolver
+
+Look up any token or pair address via DexScreener.
+
+```bash
+curl "http://localhost:3001/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+```
+
+**Response:**
 ```json
 {
-  "success": true,
-  "transaction": "base64_serialized_transaction_ready_to_sign",
-  "simulation": {
-    "success": true,
-    "logs": [
-      "Program 11111111111111111111111111111112 invoke [1]",
-      "Program 11111111111111111111111111111112 success"
-    ],
-    "unitsConsumed": 150
-  },
-  "details": {
-    "protocol": "system",
-    "instructions": 1,
-    "accounts": ["7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"],
-    "estimatedFee": "0.000005 SOL",
-    "computeUnits": 150,
-    "priorityFee": 0,
-    "parsedIntent": {
-      "action": "transfer", 
-      "protocol": "system",
-      "confidence": 0.95
-    }
+  "token": {
+    "symbol": "Bonk",
+    "name": "Bonk",
+    "mint": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+    "primaryDex": "orca",
+    "priceUsd": "0.000006031",
+    "liquidity": 862016.39
   }
 }
 ```
 
 ---
 
-## ⚡ Performance & Scale
+### `GET /api/protocols` — List Protocols
 
-- **Sub-100ms Response Times** - Optimized protocol handlers and connection pooling
-- **Multi-Network Support** - Devnet, testnet, and mainnet with automatic RPC routing
-- **Concurrent Request Handling** - Express.js with proper async/await patterns
-- **Memory Efficient** - Stateless design with minimal memory footprint
-- **Horizontal Scaling** - Deploy multiple instances behind a load balancer
+```bash
+curl "http://localhost:3001/api/protocols"
+```
+
+### `GET /api/protocols/:name/schema` — Protocol Schema
+
+```bash
+curl "http://localhost:3001/api/protocols/jupiter/schema"
+```
+
+### `GET /api/docs` — Full API Documentation
+
+Returns comprehensive JSON documentation for all endpoints.
 
 ---
 
-## 🤖 Built for the Colosseum Agent Hackathon
+## Use Cases
 
-SolForge was specifically designed for the **Colosseum Agent Hackathon** to solve the protocol integration nightmare that every agent developer faces.
+### 🤖 AI Agent Integration
+```python
+# Your agent just needs one API call
+response = requests.post("https://solforge.dev/api/build/natural", json={
+    "prompt": agent_decision,  # "swap 5 SOL for USDC"
+    "payer": wallet_address
+})
+transaction = response.json()["transaction"]
+# Sign and send with your agent's wallet
+```
 
-### Why Agents Need SolForge
-
-1. **Consistent Interface** - Same API for all protocols
-2. **Natural Language** - Agents can send human-like commands
-3. **Error Prevention** - Simulation catches issues before signing
-4. **Schema Discovery** - Agents can auto-discover parameter requirements
-5. **Comprehensive Coverage** - 12 protocols, 30+ operations ready to use
-
-### Integration Examples
-
+### 🔄 Trading Bots
 ```javascript
-// Agent integrating with SolForge
-const response = await fetch('http://solforge.api/api/build/natural', {
+// Build any swap with one consistent API
+const tx = await fetch('/api/build/natural', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    prompt: userMessage, // "swap 1 SOL for USDC"
-    payer: userWallet
+    prompt: `Buy ${amount} SOL of ${tokenMint}`,
+    payer: botWallet.publicKey.toString()
   })
 });
+```
 
-const { transaction, simulation, details } = await response.json();
+### 📱 Wallet Apps
+Embed SolForge as the transaction engine. Users type what they want, your app handles signing. No need to integrate individual protocol SDKs.
 
-// Transaction is ready to sign and send!
+### 🎓 Education
+Decode any transaction to understand what it does. Build transactions from natural language to learn how Solana works without writing Rust or understanding program accounts.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     SolForge API                         │
+├──────────────┬──────────────┬──────────────┬────────────┤
+│  NLP Parser  │  DexScreener │   Jupiter    │  Protocol  │
+│  (regex,     │  Resolver    │  Aggregator  │  Registry  │
+│   <1ms)      │  (token →    │  (optimal    │  (12+      │
+│              │   DEX info)  │   routing)   │  handlers) │
+├──────────────┴──────────────┴──────────────┴────────────┤
+│              Transaction Builder Engine                   │
+│  ┌─────────┬──────────┬────────────┬──────────────────┐  │
+│  │ Compute │ Priority │ Simulation │ Blockhash Mgmt   │  │
+│  │ Budget  │ Fees     │ Engine     │                  │  │
+│  └─────────┴──────────┴────────────┴──────────────────┘  │
+├──────────────────────────────────────────────────────────┤
+│                   Solana RPC Layer                        │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-**Built with ❤️ for the Solana ecosystem and AI agent developers**
+## Project Stats
 
-*SolForge - Where natural language meets blockchain transactions*
+- **6,000+ lines** of TypeScript
+- **12 protocols** with full handler implementations  
+- **11+ API endpoints** covering build, decode, estimate, resolve
+- **Sub-millisecond** NLP parsing (no LLM dependency)
+- **100% AI-authored** — every line written by AI agents
+
+---
+
+## Built With
+
+- **TypeScript** — Type-safe from top to bottom
+- **Express** — Lightweight API server
+- **@solana/web3.js** — Solana transaction construction
+- **Jupiter Lite API** — Swap aggregation (free, no auth required)
+- **DexScreener API** — Real-time token/pair resolution
+- **Tailwind CSS** — Modern landing page UI
+
+---
+
+## License
+
+MIT
+
+---
+
+*Built by AI agents. Powered by Solana. Submitted to the Colosseum Agent Hackathon 2026.*
