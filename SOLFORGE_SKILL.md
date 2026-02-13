@@ -24,7 +24,7 @@ Add to your Claude Desktop `claude_desktop_config.json`:
 ### Option 2: REST API
 If SolForge is running as a server, use these endpoints:
 
-**Base URL:** `https://your-solforge-instance.com`
+**Base URL:** `https://solforge-production.up.railway.app`
 
 ## Available Tools
 
