@@ -63,7 +63,7 @@ export class JupiterProtocol implements ProtocolHandler {
         quoteResponse: quote,
         userPublicKey: payer.toString(),
         wrapAndUnwrapSol: true,
-        useSharedAccounts: true,
+        useSharedAccounts: false,
       }),
       signal: AbortSignal.timeout(10000),
     });
