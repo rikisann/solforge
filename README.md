@@ -9,7 +9,7 @@ SolForge is a universal transaction builder API for Solana. Describe what you wa
 ### [▶ Live Demo — Try It Now](https://solforge-production.up.railway.app/)
 Connect your wallet, type a command, sign a real mainnet transaction.
 
-**[GitHub](https://github.com/rikisann/solforge)** · **[API Docs](https://solforge-production.up.railway.app/#api)** · **[Skill File](./SOLFORGE_SKILL.md)**
+**[GitHub](https://github.com/rikisann/solforge)** · **[API Docs](https://solforge-production.up.railway.app/#api)** · **[Skill File](./SKILL.md)**
 
 ---
 
@@ -44,7 +44,7 @@ Add to your `claude_desktop_config.json`:
 MCP tools: `build_transaction_natural`, `build_transaction`, `resolve_token`, `list_protocols`, `estimate_transaction`, `decode_transaction`
 
 ### Use the Skill File (Any LLM)
-Copy [`SOLFORGE_SKILL.md`](./SOLFORGE_SKILL.md) into any AI chat and it instantly knows how to use SolForge. Zero config.
+Copy [`SKILL.md`](./SKILL.md) into any AI chat and it instantly knows how to use SolForge. Zero config.
 
 | Integration | Setup | Best For |
 |-------------|-------|----------|
