@@ -81,7 +81,7 @@ export class IntentParser {
     },
     // Memo patterns
     {
-      pattern: /(?:write\s+memo|memo)\s+["\']([^"\']+)["\']|(?:write\s+memo|memo)\s+(.+)/i,
+      pattern: /(?:write\s+(?:onchain\s+)?memo|memo)[:\s]+["\']([^"\']+)["\']|(?:write\s+(?:onchain\s+)?memo|memo)[:\s]+(.+)/i,
       protocol: 'memo',
       action: 'memo',
       extractor: (match) => ({
@@ -609,7 +609,8 @@ export class IntentParser {
   }
 
   private static _parseSync(intent: NaturalLanguageIntent): ParsedIntent {
-    const originalPrompt = intent.prompt.trim();
+    // Strip emojis and extra whitespace from input
+    const originalPrompt = intent.prompt.trim().replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '').trim();
     const prompt = originalPrompt.toLowerCase();
     
     for (const pattern of this.patterns) {
