@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
 import routes from './api/routes';
 import { errorHandler, corsHeaders, logRequests } from './api/middleware';
 import { RPCConnection } from './utils/connection';
@@ -30,6 +31,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // Custom middleware
 app.use(corsHeaders);
 app.use(logRequests);
+
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // API routes
 app.use('/', routes);
