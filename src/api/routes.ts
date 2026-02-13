@@ -530,154 +530,72 @@ router.post('/api/execute/natural', async (req: Request, res: Response) => {
       payer: agentWallet.publicKey.toBase58()
     };
 
-    // Parse the intent using existing logic
-    const parsedIntent = await IntentParser.parseNaturalLanguageAsync(executionIntent);
-
-    // Map resolved protocol + action to the correct intent name for the builder
-    const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
-
-    // Transform buy/sell params to swap params for DEX protocols
-    let finalParams = { ...parsedIntent.params };
-    if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
-        ['jupiter', 'raydium', 'orca', 'meteora', 'pumpfun'].includes(parsedIntent.protocol)) {
-      const solMint = 'So11111111111111111111111111111111111111112';
-      if (parsedIntent.action === 'buy') {
-        finalParams = {
-          from: solMint,
-          to: finalParams.token,
-          amount: finalParams.amount,
-          slippage: finalParams.slippage || 1.0,
-          pool: finalParams.pool,
-        };
-      } else {
-        finalParams = {
-          from: finalParams.token,
-          to: solMint,
-          amount: finalParams.amount,
-          slippage: finalParams.slippage || 1.0,
-          pool: finalParams.pool,
-        };
-      }
-    }
-
-    // Convert to BuildIntent
-    const buildIntent: BuildIntent = {
-      intent: resolvedIntent,
-      params: finalParams,
-      payer: agentWallet.publicKey.toBase58(),
-      network: naturalIntent.network,
-      priorityFee: naturalIntent.priorityFee,
-      computeBudget: naturalIntent.computeBudget,
-      skipSimulation: (req.body as any).skipSimulation || false
-    };
-
-    // Build the transaction
-    let transactionBase64: string;
-
-    // Route swaps through Jupiter
-    const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action) ||
-      resolvedIntent.includes('swap');
+    // Check for multiple intents using the _splitPrompt logic from IntentParser
+    const segments = (IntentParser as any)._splitPrompt(prompt);
     
-    // Kamino/lending protocols build their own complete transactions via SDK (includes compute budget)
-    const isLendingProtocol = ['kamino', 'marginfi', 'solend'].includes(parsedIntent.protocol);
-    
-    if (isSwapAction && finalParams.from && finalParams.to) {
-      const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
-      const jupiterIntent = {
-        ...buildIntent,
-        params: {
-          from: finalParams.from,
-          to: finalParams.to,
-          amount: finalParams.amount,
-          slippage: finalParams.slippage || 1.0,
-        }
-      };
-      transactionBase64 = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
-    } else if (isLendingProtocol) {
-      // Lending protocols return instructions directly — build VersionedTransaction here
-      // This avoids TransactionBuilder adding a conflicting compute budget
-      const handler = ProtocolRegistry.getHandler(parsedIntent.protocol);
-      if (!handler) throw new Error(`No handler for protocol: ${parsedIntent.protocol}`);
-      const instructions = await handler.build(buildIntent);
+    if (segments.length > 1) {
+      // Multi-intent execution
+      const results: Array<{
+        intent: string;
+        signature: string;
+        explorer: string;
+        details: any;
+      }> = [];
       
-      const lendingNetwork = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet';
-      const lendingConn = RPCConnection.getConnection(lendingNetwork as any);
-      const { blockhash } = await lendingConn.getLatestBlockhash('confirmed');
-      
-      // Build versioned transaction with lookup table if available
-      const lookupTables: AddressLookupTableAccount[] = [];
-      const lutAddresses = (buildIntent as any)._lookupTables;
-      if (lutAddresses && lutAddresses.length > 0) {
-        for (const lutAddr of lutAddresses) {
-          try {
-            const lutAccount = await lendingConn.getAddressLookupTable(new PublicKey(lutAddr));
-            if (lutAccount.value) lookupTables.push(lutAccount.value);
-          } catch (e) { /* skip failed LUT lookups */ }
+      let hasErrors = false;
+      const errors: string[] = [];
+
+      // Execute each intent sequentially
+      for (let i = 0; i < segments.length; i++) {
+        const segmentPrompt = segments[i].trim();
+        
+        try {
+          const segmentIntent = {
+            ...executionIntent,
+            prompt: segmentPrompt
+          };
+
+          // Execute single intent
+          const result = await executeSingleIntent(segmentIntent, agentWallet, req.body);
+          results.push({
+            intent: segmentPrompt,
+            signature: result.signature,
+            explorer: result.explorer,
+            details: result.details
+          });
+          
+          // Add delay between transactions to avoid nonce conflicts
+          if (i < segments.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+        } catch (segmentError) {
+          hasErrors = true;
+          const errorMessage = segmentError instanceof Error ? segmentError.message : 'Unknown error';
+          errors.push(`Intent "${segmentPrompt}": ${errorMessage}`);
+          
+          // Continue with other intents even if one fails
+          results.push({
+            intent: segmentPrompt,
+            signature: '',
+            explorer: '',
+            details: { error: errorMessage }
+          });
         }
       }
-      
-      const messageV0 = new TransactionMessage({
-        payerKey: agentWallet.publicKey,
-        recentBlockhash: blockhash,
-        instructions,
-      }).compileToV0Message(lookupTables.length > 0 ? lookupTables : undefined);
-      const vtx = new VersionedTransaction(messageV0);
-      transactionBase64 = Buffer.from(vtx.serialize()).toString('base64');
-    } else {
-      const result = await TransactionBuilder.buildTransaction(buildIntent);
-      if (!result.success || !result.transaction) {
-        throw new Error(result.error || 'Failed to build transaction');
-      }
-      transactionBase64 = result.transaction;
-    }
 
-    // Get connection for signing and sending
-    const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet';
-    const connection = RPCConnection.getConnection(network as any);
-
-    // Deserialize, sign, and send transaction
-    let signature: string;
-    try {
-      const txBuffer = Buffer.from(transactionBase64, 'base64');
-      const transaction = VersionedTransaction.deserialize(txBuffer);
-
-      // Sign with agent wallet
-      transaction.sign([agentWallet]);
-
-      // Send transaction
-      const rawTransaction = transaction.serialize();
-      signature = await connection.sendRawTransaction(rawTransaction, {
-        skipPreflight: (req.body as any).skipSimulation || false
-      });
-
-    } catch (signingError) {
-      return res.status(400).json({
-        success: false,
-        error: 'Failed to sign or send transaction: ' + (signingError instanceof Error ? signingError.message : 'Unknown error'),
-        details: {
-          agentWallet: agentWallet.publicKey.toBase58(),
-          parsedIntent: parsedIntent
-        }
+      return res.json({
+        success: !hasErrors,
+        multi: true,
+        results,
+        summary: `Executed ${segments.length} intents: ${results.filter(r => r.signature).length} successful, ${errors.length} failed`,
+        errors: errors.length > 0 ? errors : undefined
       });
     }
 
-    // Return success response
-    const explorerUrl = network === 'mainnet' 
-      ? `https://solscan.io/tx/${signature}`
-      : `https://solscan.io/tx/${signature}?cluster=devnet`;
-
-    res.json({
-      success: true,
-      signature,
-      explorer: explorerUrl,
-      details: {
-        protocol: parsedIntent.protocol,
-        action: parsedIntent.action,
-        parsedIntent: parsedIntent,
-        confidence: parsedIntent.confidence,
-        agentWallet: agentWallet.publicKey.toBase58()
-      }
-    });
+    // Single intent execution (existing logic)
+    const result = await executeSingleIntent(executionIntent, agentWallet, req.body);
+    res.json(result);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Failed to execute transaction';
@@ -688,6 +606,203 @@ router.post('/api/execute/natural', async (req: Request, res: Response) => {
     });
   }
 });
+
+// Helper function to execute a single intent
+async function executeSingleIntent(executionIntent: NaturalLanguageIntent, agentWallet: any, requestBody: any) {
+  // Parse the intent using existing logic
+  const parsedIntent = await IntentParser.parseNaturalLanguageAsync(executionIntent);
+
+  // Map resolved protocol + action to the correct intent name for the builder
+  const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
+
+  // Transform buy/sell params to swap params for DEX protocols
+  let finalParams = { ...parsedIntent.params };
+  if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
+      ['jupiter', 'raydium', 'orca', 'meteora', 'pumpfun'].includes(parsedIntent.protocol)) {
+    const solMint = 'So11111111111111111111111111111111111111112';
+    if (parsedIntent.action === 'buy') {
+      finalParams = {
+        from: solMint,
+        to: finalParams.token,
+        amount: finalParams.amount,
+        slippage: finalParams.slippage || 1.0,
+        pool: finalParams.pool,
+      };
+    } else {
+      finalParams = {
+        from: finalParams.token,
+        to: solMint,
+        amount: finalParams.amount,
+        slippage: finalParams.slippage || 1.0,
+        pool: finalParams.pool,
+      };
+    }
+  }
+
+  // Convert to BuildIntent
+  const buildIntent: BuildIntent = {
+    intent: resolvedIntent,
+    params: finalParams,
+    payer: agentWallet.publicKey.toBase58(),
+    network: executionIntent.network,
+    priorityFee: executionIntent.priorityFee,
+    computeBudget: executionIntent.computeBudget,
+    skipSimulation: requestBody.skipSimulation || false
+  };
+
+  // Build the transaction
+  let transactionBase64: string;
+
+  // Route swaps through Jupiter
+  const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action) ||
+    resolvedIntent.includes('swap');
+  
+  // Kamino/lending protocols build their own complete transactions via SDK (includes compute budget)
+  const isLendingProtocol = ['kamino', 'marginfi', 'solend'].includes(parsedIntent.protocol);
+  
+  if (isSwapAction && finalParams.from && finalParams.to) {
+    const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
+    const jupiterIntent = {
+      ...buildIntent,
+      params: {
+        from: finalParams.from,
+        to: finalParams.to,
+        amount: finalParams.amount,
+        slippage: finalParams.slippage || 1.0,
+      }
+    };
+    transactionBase64 = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
+    
+    // Handle Jito tip bundling into swap transaction
+    if (requestBody.prompt && requestBody.prompt.toLowerCase().includes('jito')) {
+      const tipAmount = Math.floor((parsedIntent.params.tip || 0.001) * 1e9);
+      const jitoTipAccounts = [
+        '96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5',
+        'HFqU5x63VTqvQss8hp11i4bPo7SWXkQPSYrJKw7Krcab',
+        'Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY',
+      ];
+      const tipAccount = jitoTipAccounts[Math.floor(Math.random() * jitoTipAccounts.length)];
+      
+      try {
+        // Bundle Jito tip into swap transaction
+        const txBuffer = Buffer.from(transactionBase64, 'base64');
+        const versionedTx = VersionedTransaction.deserialize(txBuffer);
+        
+        const network = (executionIntent.network === 'mainnet' || !executionIntent.network) ? 'mainnet' : 'devnet';
+        const connection = RPCConnection.getConnection(network as any);
+        
+        // Get lookup table accounts for decompilation
+        const lookupTableAccounts: AddressLookupTableAccount[] = [];
+        if (versionedTx.message.addressTableLookups.length > 0) {
+          const lookupTableAddresses = versionedTx.message.addressTableLookups.map(l => l.accountKey);
+          const lookupResults = await connection.getMultipleAccountsInfo(lookupTableAddresses);
+          for (let i = 0; i < lookupTableAddresses.length; i++) {
+            const accountInfo = lookupResults[i];
+            if (accountInfo) {
+              const lookupTable = new AddressLookupTableAccount({
+                key: lookupTableAddresses[i],
+                state: AddressLookupTableAccount.deserialize(accountInfo.data),
+              });
+              lookupTableAccounts.push(lookupTable);
+            }
+          }
+        }
+        
+        // Decompile, add tip instruction, recompile
+        const message = TransactionMessage.decompile(versionedTx.message, { addressLookupTableAccounts: lookupTableAccounts });
+        message.instructions.push(
+          SystemProgram.transfer({
+            fromPubkey: agentWallet.publicKey,
+            toPubkey: new PublicKey(tipAccount),
+            lamports: tipAmount,
+          })
+        );
+        versionedTx.message = message.compileToV0Message(lookupTableAccounts);
+        transactionBase64 = Buffer.from(versionedTx.serialize()).toString('base64');
+      } catch (jitoError) {
+        console.warn('Failed to bundle Jito tip into swap:', jitoError);
+        // Continue with original swap transaction
+      }
+    }
+  } else if (isLendingProtocol) {
+    // Lending protocols return instructions directly — build VersionedTransaction here
+    // This avoids TransactionBuilder adding a conflicting compute budget
+    const handler = ProtocolRegistry.getHandler(parsedIntent.protocol);
+    if (!handler) throw new Error(`No handler for protocol: ${parsedIntent.protocol}`);
+    const instructions = await handler.build(buildIntent);
+    
+    const lendingNetwork = (executionIntent.network === 'mainnet' || !executionIntent.network) ? 'mainnet' : 'devnet';
+    const lendingConn = RPCConnection.getConnection(lendingNetwork as any);
+    const { blockhash } = await lendingConn.getLatestBlockhash('confirmed');
+    
+    // Build versioned transaction with lookup table if available
+    const lookupTables: AddressLookupTableAccount[] = [];
+    const lutAddresses = (buildIntent as any)._lookupTables;
+    if (lutAddresses && lutAddresses.length > 0) {
+      for (const lutAddr of lutAddresses) {
+        try {
+          const lutAccount = await lendingConn.getAddressLookupTable(new PublicKey(lutAddr));
+          if (lutAccount.value) lookupTables.push(lutAccount.value);
+        } catch (e) { /* skip failed LUT lookups */ }
+      }
+    }
+    
+    const messageV0 = new TransactionMessage({
+      payerKey: agentWallet.publicKey,
+      recentBlockhash: blockhash,
+      instructions,
+    }).compileToV0Message(lookupTables.length > 0 ? lookupTables : undefined);
+    const vtx = new VersionedTransaction(messageV0);
+    transactionBase64 = Buffer.from(vtx.serialize()).toString('base64');
+  } else {
+    const result = await TransactionBuilder.buildTransaction(buildIntent);
+    if (!result.success || !result.transaction) {
+      throw new Error(result.error || 'Failed to build transaction');
+    }
+    transactionBase64 = result.transaction;
+  }
+
+  // Get connection for signing and sending
+  const network = (executionIntent.network === 'mainnet' || !executionIntent.network) ? 'mainnet' : 'devnet';
+  const connection = RPCConnection.getConnection(network as any);
+
+  // Deserialize, sign, and send transaction
+  let signature: string;
+  try {
+    const txBuffer = Buffer.from(transactionBase64, 'base64');
+    const transaction = VersionedTransaction.deserialize(txBuffer);
+
+    // Sign with agent wallet
+    transaction.sign([agentWallet]);
+
+    // Send transaction
+    const rawTransaction = transaction.serialize();
+    signature = await connection.sendRawTransaction(rawTransaction, {
+      skipPreflight: requestBody.skipSimulation || false
+    });
+
+  } catch (signingError) {
+    throw new Error('Failed to sign or send transaction: ' + (signingError instanceof Error ? signingError.message : 'Unknown error'));
+  }
+
+  // Return success response
+  const explorerUrl = network === 'mainnet' 
+    ? `https://solscan.io/tx/${signature}`
+    : `https://solscan.io/tx/${signature}?cluster=devnet`;
+
+  return {
+    success: true,
+    signature,
+    explorer: explorerUrl,
+    details: {
+      protocol: parsedIntent.protocol,
+      action: parsedIntent.action,
+      parsedIntent: parsedIntent,
+      confidence: parsedIntent.confidence,
+      agentWallet: agentWallet.publicKey.toBase58()
+    }
+  };
+}
 
 // Get agent wallet information
 router.get('/api/agent-wallet', (req: Request, res: Response) => {
