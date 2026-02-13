@@ -1,21 +1,28 @@
 import { Router, Request, Response } from 'express';
 import { TransactionBuilder } from '../engine/builder';
 import { IntentParser } from '../engine/intent-parser';
+import { TransactionDecoder } from '../engine/decoder';
+import { TransactionEstimator } from '../engine/estimator';
 import { ProtocolRegistry } from '../protocols';
-import { BuildIntent, NaturalLanguageIntent } from '../utils/types';
+import { BuildIntent, NaturalLanguageIntent, MultiBuildIntent, DecodeRequest, EstimateRequest } from '../utils/types';
 import { 
   validateBuildIntent, 
   validateNaturalIntent,
-  rateLimiter 
+  validateMultiBuildIntent,
+  validateDecodeRequest,
+  validateEstimateRequest,
+  rateLimiter,
+  logRequests
 } from './middleware';
 
 const router = Router();
 
-// Apply rate limiting to all routes
+// Apply middleware to all routes
 router.use(rateLimiter(
   parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
   parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100')
 ));
+router.use(logRequests);
 
 // Health check
 router.get('/health', (req: Request, res: Response) => {
@@ -96,6 +103,51 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to parse intent'
+    });
+  }
+});
+
+// Build multi-intent transaction
+router.post('/api/build/multi', validateMultiBuildIntent, async (req: Request, res: Response) => {
+  try {
+    const multiIntent: MultiBuildIntent = req.body;
+    const result = await TransactionBuilder.buildMultiTransaction(multiIntent);
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
+});
+
+// Decode transaction
+router.post('/api/decode', validateDecodeRequest, async (req: Request, res: Response) => {
+  try {
+    const decodeRequest: DecodeRequest = req.body;
+    const result = await TransactionDecoder.decodeTransaction(decodeRequest.transaction);
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to decode transaction'
+    });
+  }
+});
+
+// Estimate transaction costs
+router.post('/api/estimate', validateEstimateRequest, async (req: Request, res: Response) => {
+  try {
+    const estimateRequest: EstimateRequest = req.body;
+    const result = await TransactionEstimator.estimateTransaction(estimateRequest);
+    
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to estimate transaction'
     });
   }
 });
