@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
     <style>
         :root {
             --bg-primary: #0a0a0a;
@@ -145,6 +146,85 @@
         .btn-secondary:hover {
             border-color: var(--accent);
             color: var(--accent);
+        }
+
+        .btn-wallet {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-wallet:hover {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-wallet.connected {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--accent);
+        }
+
+        .btn-sign {
+            background: linear-gradient(135deg, #ffaa55 0%, #ff8800 100%);
+            color: #000;
+            font-weight: 600;
+        }
+
+        .btn-sign:hover {
+            background: linear-gradient(135deg, #ff8800 0%, #cc6600 100%);
+            box-shadow: 0 10px 30px rgba(255, 170, 85, 0.3);
+        }
+
+        .wallet-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .wallet-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .wallet-address {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .transaction-result {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .transaction-result a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .transaction-result a:hover {
+            text-decoration: underline;
+        }
+
+        .wallet-not-found {
+            background: rgba(255, 85, 85, 0.1);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .wallet-not-found a {
+            color: var(--accent);
+            text-decoration: none;
         }
 
         /* Section Styling */
@@ -480,6 +560,16 @@
                             placeholder="e.g., Transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
                         ></textarea>
                     </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Wallet Connection</label>
+                        <button id="connect-wallet-btn" class="btn btn-wallet" onclick="connectWallet()">
+                            Connect Wallet
+                        </button>
+                        <div id="wallet-not-found" class="wallet-not-found" style="display: none;">
+                            <p>Install <a href="https://phantom.app" target="_blank">Phantom</a> or another Solana wallet to sign transactions</p>
+                        </div>
+                    </div>
                     
                     <div class="form-group">
                         <label class="form-label">Payer Address</label>
@@ -531,6 +621,10 @@
                     <div id="demo-output" class="demo-output">
                         Click "Build Transaction" to see the API response...
                     </div>
+                    <button id="sign-send-btn" class="btn btn-sign" onclick="signAndSendTransaction()" style="display: none; margin-top: 1rem;">
+                        Sign & Send Transaction
+                    </button>
+                    <div id="transaction-result" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -704,8 +798,176 @@
     </footer>
 
     <script>
-        // Simulation toggle
+        // Global state
         let simulationEnabled = false;
+        let connectedWallet = null;
+        let walletProvider = null;
+        let lastTransactionData = null;
+        let connection = null;
+
+        // Initialize connection
+        if (typeof solanaWeb3 !== 'undefined') {
+            connection = new solanaWeb3.Connection('https://api.mainnet-beta.solana.com');
+        }
+
+        // Wallet connection
+        async function connectWallet() {
+            const connectBtn = document.getElementById('connect-wallet-btn');
+            const walletNotFound = document.getElementById('wallet-not-found');
+            const payerInput = document.getElementById('payer-input');
+
+            try {
+                // Hide wallet not found message
+                walletNotFound.style.display = 'none';
+
+                // Check for Phantom or other Solana wallet providers
+                const provider = window.phantom?.solana || window.solana;
+                
+                if (!provider) {
+                    walletNotFound.style.display = 'block';
+                    return;
+                }
+
+                connectBtn.textContent = 'Connecting...';
+                connectBtn.disabled = true;
+
+                // Connect to wallet
+                const response = await provider.connect();
+                const publicKey = response.publicKey.toString();
+
+                // Update state
+                connectedWallet = publicKey;
+                walletProvider = provider;
+
+                // Update UI
+                connectBtn.innerHTML = `
+                    <div class="wallet-status">
+                        <div class="wallet-dot"></div>
+                        <span class="wallet-address">Connected: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}</span>
+                    </div>
+                `;
+                connectBtn.classList.add('connected');
+                connectBtn.disabled = false;
+
+                // Auto-fill payer address
+                payerInput.value = publicKey;
+                payerInput.style.background = 'rgba(0, 255, 136, 0.05)';
+                payerInput.style.borderColor = 'var(--accent)';
+
+                console.log('Wallet connected:', publicKey);
+
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                connectBtn.textContent = 'Connect Wallet';
+                connectBtn.disabled = false;
+                
+                if (error.code === 4001) {
+                    // User rejected connection
+                    alert('Wallet connection rejected by user');
+                } else {
+                    alert('Failed to connect wallet: ' + error.message);
+                }
+            }
+        }
+
+        // Sign and send transaction
+        async function signAndSendTransaction() {
+            const signBtn = document.getElementById('sign-send-btn');
+            const resultDiv = document.getElementById('transaction-result');
+
+            if (!connectedWallet || !walletProvider) {
+                alert('Please connect your wallet first');
+                return;
+            }
+
+            if (!lastTransactionData || !lastTransactionData.transaction) {
+                alert('No transaction to sign. Please build a transaction first.');
+                return;
+            }
+
+            try {
+                signBtn.textContent = 'Signing...';
+                signBtn.disabled = true;
+                resultDiv.style.display = 'none';
+
+                const transactionBase64 = lastTransactionData.transaction;
+                
+                // Try to deserialize as VersionedTransaction first, fallback to legacy Transaction
+                let transaction;
+                let isVersioned = false;
+                
+                try {
+                    const transactionBuffer = Buffer.from(transactionBase64, 'base64');
+                    transaction = solanaWeb3.VersionedTransaction.deserialize(transactionBuffer);
+                    isVersioned = true;
+                    console.log('Deserialized as VersionedTransaction');
+                } catch (versionedError) {
+                    console.log('Failed to deserialize as VersionedTransaction, trying legacy:', versionedError.message);
+                    try {
+                        const transactionBuffer = Buffer.from(transactionBase64, 'base64');
+                        transaction = solanaWeb3.Transaction.from(transactionBuffer);
+                        isVersioned = false;
+                        console.log('Deserialized as legacy Transaction');
+                    } catch (legacyError) {
+                        throw new Error(`Failed to deserialize transaction: ${legacyError.message}`);
+                    }
+                }
+
+                // Sign transaction
+                signBtn.textContent = 'Waiting for signature...';
+                const signedTransaction = await walletProvider.signTransaction(transaction);
+
+                // Send transaction
+                signBtn.textContent = 'Sending transaction...';
+                const rawTransaction = signedTransaction.serialize();
+                const signature = await connection.sendRawTransaction(rawTransaction, {
+                    skipPreflight: false,
+                    preflightCommitment: 'processed'
+                });
+
+                // Wait for confirmation
+                signBtn.textContent = 'Confirming...';
+                await connection.confirmTransaction(signature, 'confirmed');
+
+                // Show success result
+                resultDiv.innerHTML = `
+                    <div class="transaction-result">
+                        <strong>Transaction sent successfully! 🎉</strong><br>
+                        <strong>Signature:</strong> <span style="font-family: monospace; word-break: break-all;">${signature}</span><br>
+                        <strong>Explorer:</strong> <a href="https://solscan.io/tx/${signature}" target="_blank">View on Solscan →</a>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+
+                console.log('Transaction sent:', signature);
+
+            } catch (error) {
+                console.error('Transaction failed:', error);
+                
+                let errorMessage = error.message;
+                if (error.code === 4001) {
+                    errorMessage = 'Transaction rejected by user';
+                } else if (error.message.includes('insufficient funds')) {
+                    errorMessage = 'Insufficient funds in wallet';
+                } else if (error.message.includes('blockhash not found')) {
+                    errorMessage = 'Transaction expired, please rebuild and try again';
+                }
+
+                resultDiv.innerHTML = `
+                    <div style="background: rgba(255, 85, 85, 0.1); border: 1px solid var(--error); border-radius: 8px; padding: 1rem; color: var(--error);">
+                        <strong>Transaction failed:</strong><br>
+                        ${errorMessage}
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+
+            } finally {
+                signBtn.textContent = 'Sign & Send Transaction';
+                signBtn.disabled = false;
+            }
+        }
+
+        // Simulation toggle
         function toggleSimulation() {
             simulationEnabled = !simulationEnabled;
             const track = document.getElementById('toggle-track');
@@ -735,6 +997,8 @@
             const payerInput = document.getElementById('payer-input');
             const outputDiv = document.getElementById('demo-output');
             const buildBtn = document.getElementById('build-btn');
+            const signBtn = document.getElementById('sign-send-btn');
+            const resultDiv = document.getElementById('transaction-result');
             
             const prompt = promptInput.value.trim();
             const payer = payerInput.value.trim();
@@ -744,6 +1008,11 @@
                 outputDiv.className = 'demo-output error';
                 return;
             }
+
+            // Hide previous results
+            signBtn.style.display = 'none';
+            resultDiv.style.display = 'none';
+            lastTransactionData = null;
             
             // Show loading state
             buildBtn.disabled = true;
@@ -773,6 +1042,12 @@
                 // Display the response
                 outputDiv.textContent = JSON.stringify(data, null, 2);
                 outputDiv.className = response.ok ? 'demo-output' : 'demo-output error';
+
+                // Show Sign & Send button if successful and wallet is connected
+                if (response.ok && data.success && data.transaction && connectedWallet) {
+                    lastTransactionData = data;
+                    signBtn.style.display = 'inline-flex';
+                }
                 
             } catch (error) {
                 console.error('API Error:', error);
@@ -822,6 +1097,13 @@
         textarea.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
+        });
+
+        // Check for wallet on page load
+        window.addEventListener('load', function() {
+            if (!window.phantom?.solana && !window.solana) {
+                document.getElementById('wallet-not-found').style.display = 'block';
+            }
         });
     </script>
 </body>
