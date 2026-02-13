@@ -118,6 +118,51 @@ Jupiter · Raydium · Orca · Meteora · Pump.fun · Marinade · System Program 
 
 ---
 
+## 🤖 Agent Use Cases — SolForge + AI = Onchain Autopilot
+
+SolForge handles the **HOW** (transaction building). Your AI agent handles the **WHEN** and **WHY**. Together, they're unstoppable.
+
+### Scheduled Trading
+- *"Buy $10 of BONK every hour"* — agent sets a cron job, calls SolForge each tick
+- DCA strategies entirely managed by your AI assistant — no dashboards, no manual clicks
+
+### Conditional Execution
+- *"If SOL drops below $80, swap all my USDC into SOL"* — agent monitors price, executes when triggered
+- *"When my staking rewards hit 1 SOL, restake them"* — fully autonomous compounding
+
+### Portfolio Management
+- *"Rebalance my portfolio to 50% SOL, 30% USDC, 20% BONK every week"*
+- *"Take profits — sell 10% of any token that's up 50%+"*
+
+### Timed Operations
+- *"Unstake my SOL in 3 months"* — agent schedules it, executes when time comes
+- *"Remind me to claim my airdrop on March 15th, and if I don't respond, claim it for me"*
+
+### Multi-step Strategies
+- *"Swap 5 SOL for USDC, then liquid stake 2 SOL with Marinade, and tip Jito"*
+- *"Every morning, check if BONK is down >10%, if so buy 0.5 SOL worth"*
+
+### Social / Copy Trading
+- *"Watch wallet ABC123 — whenever they buy a token, buy the same token with 0.1 SOL"*
+- Copy-trading powered by natural language
+
+> **The pattern:** You speak English to your agent. The agent speaks SolForge. SolForge speaks Solana. That's it — one API call from intent to onchain execution.
+
+---
+
+## 🗺️ Roadmap
+
+- ✅ Natural language transaction building (12+ protocols)
+- ✅ MCP Server for deep agent integration
+- ✅ Self-healing NLP parser (regex → learned patterns → LLM fallback)
+- 🔜 **Privy embedded wallets** — agents get their own wallet, no private key handling needed. Fund it, delegate, and your agent executes autonomously via Privy's TEE infrastructure
+- 🔜 Transaction simulation & dry-run mode
+- 🔜 Portfolio queries ("What tokens do I hold?", "What's my SOL balance?")
+- 🔜 Event subscriptions ("Notify me when this token moves 5%")
+- 🔜 Multi-chain expansion
+
+---
+
 ## Project Stats
 
 - **6,000+ lines** of TypeScript
