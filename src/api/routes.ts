@@ -3,6 +3,7 @@ import { TransactionBuilder } from '../engine/builder';
 import { IntentParser } from '../engine/intent-parser';
 import { TransactionDecoder } from '../engine/decoder';
 import { TransactionEstimator } from '../engine/estimator';
+import { TokenResolver } from '../engine/token-resolver';
 import { ProtocolRegistry } from '../protocols';
 import { BuildIntent, NaturalLanguageIntent, MultiBuildIntent, DecodeRequest, EstimateRequest } from '../utils/types';
 import { 
@@ -292,6 +293,82 @@ router.post('/api/quote', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get quote'
+    });
+  }
+});
+
+// Resolve endpoint for token/pair resolution without building transaction
+router.post('/api/resolve', async (req: Request, res: Response) => {
+  try {
+    const { address, type } = req.body;
+    
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'address is required'
+      });
+    }
+
+    let result;
+    
+    if (type === 'pair' || (!type && address.length > 10)) {
+      // Try pair resolution first for longer addresses or explicit pair type
+      result = await TokenResolver.resolveByPair(address);
+      
+      if (result) {
+        return res.json({
+          success: true,
+          type: 'pair',
+          address,
+          result: {
+            protocol: result.protocol,
+            baseToken: result.baseToken,
+            quoteToken: result.quoteToken,
+            pool: result.pool,
+            tokenInfo: result.tokenInfo
+          }
+        });
+      }
+      
+      // If pair resolution failed, try token resolution
+      if (!type) {
+        const tokenResult = await TokenResolver.resolve(address);
+        if (tokenResult) {
+          return res.json({
+            success: true,
+            type: 'token',
+            address,
+            result: tokenResult
+          });
+        }
+      }
+    } else {
+      // Try token resolution
+      result = await TokenResolver.resolve(address);
+      
+      if (result) {
+        return res.json({
+          success: true,
+          type: 'token',
+          address,
+          result
+        });
+      }
+    }
+
+    // Neither resolution worked
+    return res.status(404).json({
+      success: false,
+      error: `Could not resolve ${type || 'token/pair'}: ${address}`,
+      address,
+      type: type || 'unknown'
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Resolution failed',
+      address: req.body.address
     });
   }
 });

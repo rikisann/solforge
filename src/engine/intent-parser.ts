@@ -127,32 +127,291 @@ export class IntentParser {
     // Token address buy/sell patterns — protocol resolved dynamically via DexScreener
     // "buy 0.5 sol of TOKEN_ADDRESS" / "buy 0.5sol of this token TOKEN_ADDRESS"
     {
-      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
       protocol: '__resolve__',
       action: 'buy',
       extractor: (match) => ({
         amount: parseFloat(match[1]),
-        token: match[2]
+        token: match[2],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
       })
     },
     // "buy TOKEN_ADDRESS with 0.5 sol"
     {
-      pattern: /buy\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(?:with\s+)?(\d+(?:\.\d+)?)\s*sol/i,
+      pattern: /buy\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+(?:with\s+)?(\d+(?:\.\d+)?)\s*sol(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
       protocol: '__resolve__',
       action: 'buy',
       extractor: (match) => ({
         amount: parseFloat(match[2]),
-        token: match[1]
+        token: match[1],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
       })
     },
     // "sell 0.5 sol of TOKEN_ADDRESS" / "sell 100 TOKEN_ADDRESS"
     {
-      pattern: /sell\s+(\d+(?:\.\d+)?)\s*(?:sol\s+)?(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b/i,
+      pattern: /sell\s+(\d+(?:\.\d+)?)\s*(?:sol\s+)?(?:of\s+)?(?:this\s+)?(?:token\s+)?([1-9A-HJ-NP-Za-km-z]{32,44})\b(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
       protocol: '__resolve__',
       action: 'sell',
       extractor: (match) => ({
         amount: parseFloat(match[1]),
-        token: match[2]
+        token: match[2],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // Pair address patterns - "buy 5 sol of pair ADDRESS" / "sell from pair ADDRESS"
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s*sol\s+of\s+(?:this\s+)?pair\s+([1-9A-HJ-NP-Za-km-z]{32,44})\b(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve_pair__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        pair: match[2],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    {
+      pattern: /sell\s+(?:from\s+)?pair\s+([1-9A-HJ-NP-Za-km-z]{32,44})\b(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve_pair__',
+      action: 'sell',
+      extractor: (match) => ({
+        pair: match[1],
+        slippage: match[2] ? parseFloat(match[2]) : undefined
+      })
+    },
+    // Amount variations: "buy 0.5 SOL worth of TOKEN"
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s+sol\s+worth\s+of\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "spend 2 sol on TOKEN"
+    {
+      pattern: /spend\s+(\d+(?:\.\d+)?)\s+sol\s+on\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "put 1 sol into TOKEN"
+    {
+      pattern: /put\s+(\d+(?:\.\d+)?)\s+sol\s+into\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "ape 5 sol into TOKEN_ADDRESS" (degen slang)
+    {
+      pattern: /ape\s+(\d+(?:\.\d+)?)\s+sol\s+into\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "ape into TOKEN_ADDRESS with 2 sol"
+    {
+      pattern: /ape\s+into\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})\s+with\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[2]),
+        token: match[1],
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // Sell variations: "sell all TOKEN" / "sell everything"
+    {
+      pattern: /sell\s+(?:all|everything)(?:\s+(\w+))?(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        token: match[1] ? match[1].toUpperCase() : null,
+        slippage: match[2] ? parseFloat(match[2]) : undefined
+      })
+    },
+    // "dump TOKEN_ADDRESS"
+    {
+      pattern: /dump\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        token: match[1],
+        slippage: match[2] ? parseFloat(match[2]) : undefined
+      })
+    },
+    // "exit TOKEN_ADDRESS"
+    {
+      pattern: /exit\s+([1-9A-HJ-NP-Za-km-z]{32,44}|[\w]{2,10})(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        token: match[1],
+        slippage: match[2] ? parseFloat(match[2]) : undefined
+      })
+    },
+    // "sell my TOKEN for sol"
+    {
+      pattern: /sell\s+my\s+(\w+)\s+for\s+sol(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'sell',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        token: match[1].toUpperCase(),
+        slippage: match[2] ? parseFloat(match[2]) : undefined
+      })
+    },
+    // Swap variations: "convert 100 USDC to SOL"
+    {
+      pattern: /convert\s+(\d+(?:\.\d+)?)\s+(\w+)\s+to\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // "change 50 USDT to USDC"
+    {
+      pattern: /change\s+(\d+(?:\.\d+)?)\s+(\w+)\s+to\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // "trade 1 SOL for USDC"
+    {
+      pattern: /trade\s+(\d+(?:\.\d+)?)\s+(\w+)\s+for\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // "exchange 10 SOL for USDC"
+    {
+      pattern: /exchange\s+(\d+(?:\.\d+)?)\s+(\w+)\s+for\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        from: match[2].toUpperCase(),
+        to: match[3].toUpperCase(),
+        slippage: match[4] ? parseFloat(match[4]) : 0.5
+      })
+    },
+    // Buy/sell tokens by symbol: "buy 1 sol of BONK"
+    {
+      pattern: /buy\s+(\d+(?:\.\d+)?)\s+sol\s+of\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: '__resolve__',
+      action: 'buy',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : undefined
+      })
+    },
+    // "swap SOL to JUP"
+    {
+      pattern: /swap\s+(\w+)\s+to\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: 1.0, // Default amount
+        from: match[1].toUpperCase(),
+        to: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : 0.5
+      })
+    },
+    // DeFi operations: "provide 5 SOL liquidity on orca"
+    {
+      pattern: /provide\s+(\d+(?:\.\d+)?)\s+(\w+)\s+liquidity\s+on\s+orca/i,
+      protocol: 'orca',
+      action: 'add-liquidity',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // "add liquidity to POOL_ADDRESS"
+    {
+      pattern: /add\s+liquidity\s+to\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'orca', // Default to Orca, could be made dynamic
+      action: 'add-liquidity',
+      extractor: (match) => ({
+        pool: match[1]
+      })
+    },
+    // "remove my liquidity from POOL_ADDRESS"
+    {
+      pattern: /remove\s+(?:my\s+)?liquidity\s+from\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'orca', // Default to Orca, could be made dynamic
+      action: 'remove-liquidity',
+      extractor: (match) => ({
+        pool: match[1]
+      })
+    },
+    // "unstake my SOL from marinade"
+    {
+      pattern: /unstake\s+(?:my\s+)?(\w+)\s+from\s+marinade/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // "liquid stake 10 SOL" (should route to marinade)
+    {
+      pattern: /liquid\s+stake\s+(\d+(?:\.\d+)?)\s+sol/i,
+      protocol: 'marinade',
+      action: 'stake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    // Priority fees: "swap 1 SOL for USDC with high priority"
+    {
+      pattern: /(.+)\s+with\s+(?:high\s+)?priority/i,
+      protocol: '__reparse__', // Special flag to reparse without the priority part
+      action: '__reparse__',
+      extractor: (match) => ({
+        originalPrompt: match[1],
+        priorityFee: 'high' // Will be handled by the routes
+      })
+    },
+    // "transfer 1 SOL to ADDRESS urgently"
+    {
+      pattern: /(.+)\s+urgently/i,
+      protocol: '__reparse__',
+      action: '__reparse__',
+      extractor: (match) => ({
+        originalPrompt: match[1],
+        priorityFee: 'high'
       })
     },
     // Explicit pump.fun patterns (when user specifies the DEX)
@@ -300,6 +559,33 @@ export class IntentParser {
    */
   static async parseNaturalLanguageAsync(intent: NaturalLanguageIntent): Promise<ParsedIntent> {
     const result = this._parseSync(intent);
+
+    // Handle priority fee reparsing
+    if (result.protocol === '__reparse__' && result.params.originalPrompt) {
+      const reparsedIntent: NaturalLanguageIntent = {
+        ...intent,
+        prompt: result.params.originalPrompt,
+        priorityFee: result.params.priorityFee || intent.priorityFee
+      };
+      const reparsedResult = await this.parseNaturalLanguageAsync(reparsedIntent);
+      reparsedResult.params.priorityFee = result.params.priorityFee;
+      return reparsedResult;
+    }
+
+    // If protocol is __resolve_pair__, look up the pair on DexScreener
+    if (result.protocol === '__resolve_pair__' && result.params.pair) {
+      const pairInfo = await TokenResolver.resolveByPair(result.params.pair);
+      if (pairInfo) {
+        result.protocol = pairInfo.protocol;
+        result.params.pool = pairInfo.pool;
+        result.params.token = pairInfo.baseToken; // Buy the base token of the pair
+        result.params._pairInfo = pairInfo.tokenInfo;
+        result.confidence = 0.95;
+      } else {
+        result.protocol = 'jupiter'; // Fallback
+        result.confidence = 0.5;
+      }
+    }
 
     // If protocol is __resolve__, look up the token on DexScreener
     if (result.protocol === '__resolve__' && result.params.token) {

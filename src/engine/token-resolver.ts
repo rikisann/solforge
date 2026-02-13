@@ -42,6 +42,7 @@ const DEX_ID_MAP: Record<string, string> = {
 
 export class TokenResolver {
   private static cache = new Map<string, { info: TokenInfo | null; timestamp: number }>();
+  private static pairCache = new Map<string, { info: any; timestamp: number }>();
   private static CACHE_TTL = 60_000; // 1 minute cache
 
   /**
@@ -97,6 +98,59 @@ export class TokenResolver {
     } catch (error) {
       console.warn(`TokenResolver: Failed to resolve ${mint}:`, error);
       this.cache.set(mint, { info: null, timestamp: Date.now() });
+      return null;
+    }
+  }
+
+  /**
+   * Look up a pair by pair address using DexScreener.
+   * Returns the pair info including both tokens and which DEX it's on.
+   */
+  static async resolveByPair(pairAddress: string): Promise<{ protocol: string; baseToken: string; quoteToken: string; pool: string; tokenInfo?: any } | null> {
+    // Check cache
+    const cached = this.pairCache.get(pairAddress);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      return cached.info;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.dexscreener.com/latest/dex/pairs/solana/${pairAddress}`,
+        { signal: AbortSignal.timeout(5000) }
+      );
+
+      if (!response.ok) {
+        this.pairCache.set(pairAddress, { info: null, timestamp: Date.now() });
+        return null;
+      }
+
+      const data = await response.json() as { pair?: DexScreenerPair };
+      const pair = data.pair;
+
+      if (!pair || pair.chainId !== 'solana') {
+        this.pairCache.set(pairAddress, { info: null, timestamp: Date.now() });
+        return null;
+      }
+
+      const info = {
+        protocol: DEX_ID_MAP[pair.dexId] || pair.dexId,
+        baseToken: pair.baseToken.address,
+        quoteToken: pair.quoteToken.address,
+        pool: pair.pairAddress,
+        tokenInfo: {
+          symbol: pair.baseToken.symbol,
+          name: pair.baseToken.name,
+          priceUsd: pair.priceUsd,
+          liquidity: pair.liquidity?.usd,
+          dex: pair.dexId
+        }
+      };
+
+      this.pairCache.set(pairAddress, { info, timestamp: Date.now() });
+      return info;
+    } catch (error) {
+      console.warn(`TokenResolver: Failed to resolve pair ${pairAddress}:`, error);
+      this.pairCache.set(pairAddress, { info: null, timestamp: Date.now() });
       return null;
     }
   }
