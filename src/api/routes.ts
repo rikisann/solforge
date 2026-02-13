@@ -8,6 +8,7 @@ import { ProtocolRegistry } from '../protocols';
 import { BuildIntent, NaturalLanguageIntent, MultiBuildIntent, DecodeRequest, EstimateRequest } from '../utils/types';
 import { VersionedTransaction, TransactionMessage, SystemProgram, PublicKey, TransactionInstruction, AddressLookupTableAccount } from '@solana/web3.js';
 import { RPCConnection } from '../utils/connection';
+import { getAgentWallet, getAgentPublicKey, isAgentWalletEnabled } from '../utils/agent-wallet';
 import { 
   validateBuildIntent, 
   validateNaturalIntent,
@@ -488,6 +489,193 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       success: false,
       error: errorMessage,
       suggestions: generateErrorSuggestions(errorMessage, parsedIntent)
+    });
+  }
+});
+
+// Execute transaction with agent wallet (server-side signing)
+router.post('/api/execute/natural', async (req: Request, res: Response) => {
+  try {
+    // Validate request
+    const { prompt } = req.body;
+    
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt is required and must be a non-empty string'
+      });
+    }
+
+    if (prompt.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt too long. Maximum 500 characters allowed.'
+      });
+    }
+
+    // Check if agent wallet is enabled
+    if (!isAgentWalletEnabled()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Agent wallet not configured. Please set AGENT_WALLET_SECRET_KEY environment variable.'
+      });
+    }
+
+    const agentWallet = getAgentWallet()!;
+    const naturalIntent: NaturalLanguageIntent = req.body;
+
+    // Override payer with agent wallet address
+    const executionIntent = {
+      ...naturalIntent,
+      payer: agentWallet.publicKey.toBase58()
+    };
+
+    // Parse the intent using existing logic
+    const parsedIntent = await IntentParser.parseNaturalLanguageAsync(executionIntent);
+
+    // Map resolved protocol + action to the correct intent name for the builder
+    const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
+
+    // Transform buy/sell params to swap params for DEX protocols
+    let finalParams = { ...parsedIntent.params };
+    if ((parsedIntent.action === 'buy' || parsedIntent.action === 'sell') && 
+        ['jupiter', 'raydium', 'orca', 'meteora', 'pumpfun'].includes(parsedIntent.protocol)) {
+      const solMint = 'So11111111111111111111111111111111111111112';
+      if (parsedIntent.action === 'buy') {
+        finalParams = {
+          from: solMint,
+          to: finalParams.token,
+          amount: finalParams.amount,
+          slippage: finalParams.slippage || 1.0,
+          pool: finalParams.pool,
+        };
+      } else {
+        finalParams = {
+          from: finalParams.token,
+          to: solMint,
+          amount: finalParams.amount,
+          slippage: finalParams.slippage || 1.0,
+          pool: finalParams.pool,
+        };
+      }
+    }
+
+    // Convert to BuildIntent
+    const buildIntent: BuildIntent = {
+      intent: resolvedIntent,
+      params: finalParams,
+      payer: agentWallet.publicKey.toBase58(),
+      network: naturalIntent.network,
+      priorityFee: naturalIntent.priorityFee,
+      computeBudget: naturalIntent.computeBudget,
+      skipSimulation: (req.body as any).skipSimulation || false
+    };
+
+    // Build the transaction
+    let transactionBase64: string;
+
+    // Route swaps through Jupiter
+    const isSwapAction = ['swap', 'buy', 'sell'].includes(parsedIntent.action) ||
+      resolvedIntent.includes('swap');
+    
+    if (isSwapAction && finalParams.from && finalParams.to) {
+      const jupiterProtocol = ProtocolRegistry.getHandler('jupiter') as any;
+      const jupiterIntent = {
+        ...buildIntent,
+        params: {
+          from: finalParams.from,
+          to: finalParams.to,
+          amount: finalParams.amount,
+          slippage: finalParams.slippage || 1.0,
+        }
+      };
+      transactionBase64 = await jupiterProtocol.buildSwapTransaction(jupiterIntent);
+    } else {
+      const result = await TransactionBuilder.buildTransaction(buildIntent);
+      if (!result.success || !result.transaction) {
+        throw new Error(result.error || 'Failed to build transaction');
+      }
+      transactionBase64 = result.transaction;
+    }
+
+    // Get connection for signing and sending
+    const network = (naturalIntent.network === 'mainnet' || !naturalIntent.network) ? 'mainnet' : 'devnet';
+    const connection = RPCConnection.getConnection(network as any);
+
+    // Deserialize, sign, and send transaction
+    let signature: string;
+    try {
+      const txBuffer = Buffer.from(transactionBase64, 'base64');
+      const transaction = VersionedTransaction.deserialize(txBuffer);
+
+      // Sign with agent wallet
+      transaction.sign([agentWallet]);
+
+      // Send transaction
+      const rawTransaction = transaction.serialize();
+      signature = await connection.sendRawTransaction(rawTransaction, {
+        skipPreflight: (req.body as any).skipSimulation || false
+      });
+
+    } catch (signingError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to sign or send transaction: ' + (signingError instanceof Error ? signingError.message : 'Unknown error'),
+        details: {
+          agentWallet: agentWallet.publicKey.toBase58(),
+          parsedIntent: parsedIntent
+        }
+      });
+    }
+
+    // Return success response
+    const explorerUrl = network === 'mainnet' 
+      ? `https://solscan.io/tx/${signature}`
+      : `https://solscan.io/tx/${signature}?cluster=devnet`;
+
+    res.json({
+      success: true,
+      signature,
+      explorer: explorerUrl,
+      details: {
+        protocol: parsedIntent.protocol,
+        action: parsedIntent.action,
+        parsedIntent: parsedIntent,
+        confidence: parsedIntent.confidence,
+        agentWallet: agentWallet.publicKey.toBase58()
+      }
+    });
+
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to execute transaction';
+    res.status(400).json({
+      success: false,
+      error: errorMessage,
+      suggestions: generateErrorSuggestions(errorMessage)
+    });
+  }
+});
+
+// Get agent wallet information
+router.get('/api/agent-wallet', (req: Request, res: Response) => {
+  try {
+    if (isAgentWalletEnabled()) {
+      const publicKey = getAgentPublicKey();
+      res.json({
+        enabled: true,
+        publicKey,
+        note: "Fund this wallet to enable agent execution"
+      });
+    } else {
+      res.json({
+        enabled: false,
+        note: "Set AGENT_WALLET_SECRET_KEY environment variable to enable agent execution"
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get agent wallet information'
     });
   }
 });

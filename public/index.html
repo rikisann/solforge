@@ -415,6 +415,77 @@
         </div>
     </section>
 
+    <!-- Agent Wallet Section -->
+    <section class="py-20 bg-slate-900 border-t border-slate-700">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 gradient-text">🤖 Server-Side Agent Execution</h2>
+                <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                    SolForge now supports server-side signing with agent wallets — enabling fully autonomous transaction execution without user interaction.
+                </p>
+            </div>
+            
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-8 shadow-2xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-semibold text-white">How It Works</h3>
+                            <div class="space-y-3 text-slate-300">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                                    <p>Configure a server-side keypair via environment variable</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                                    <p>Fund the agent wallet with SOL for transaction fees</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                                    <p>Use <code class="text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded">/api/execute/natural</code> for autonomous transaction execution</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <h3 class="text-xl font-semibold text-white">Security Features</h3>
+                            <div class="space-y-3 text-slate-300">
+                                <div class="flex items-start gap-3">
+                                    <span class="text-green-400">🔐</span>
+                                    <p>Secret key never leaves the server environment</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="text-green-400">🚫</span>
+                                    <p>Environment variables excluded from git commits</p>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <span class="text-green-400">⚡</span>
+                                    <p>Transactions signed and submitted server-side instantly</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 p-6 bg-slate-900 border border-slate-600 rounded-xl">
+                        <h4 class="text-white font-semibold mb-3">Example API Call</h4>
+                        <pre class="text-sm font-mono text-slate-300 overflow-x-auto">curl -X POST https://api.solforge.dev/api/execute/natural \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "swap 0.5 SOL for USDC"
+  }'
+
+# Returns transaction signature + explorer link
+{
+  "success": true,
+  "signature": "5j8...",
+  "explorer": "https://solscan.io/tx/5j8...",
+  "details": { ... }
+}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- MCP Integration Section -->
     <section class="py-20 bg-slate-800 border-t border-slate-700">
         <div class="container mx-auto px-6">
