@@ -114,64 +114,6 @@ Most agents only need `/api/build/natural`. These are available if you need them
 | GET | `/api/resolve?query=BONK` | Look up token/pair info |
 | GET | `/api/protocols` | List all 12+ supported protocols |
 
-## Execute Mode — One API Call from English to Onchain
-
-Skip wallet signing entirely. Pass `execute: true` and a `privateKey` to go from natural language straight to an onchain transaction.
-
-### One-call execute
-
-```json
-POST /api/build/natural
-{
-  "prompt": "Swap 0.1 SOL for USDC",
-  "payer": "YOUR_PUBLIC_KEY",
-  "privateKey": "base58_private_key",
-  "execute": true
-}
-```
-
-Response:
-```json
-{
-  "success": true,
-  "executed": true,
-  "signature": "5UfDu...",
-  "explorerUrl": "https://solscan.io/tx/5UfDu...",
-  "transaction": "base64...",
-  "details": { ... }
-}
-```
-
-### Two-step build-then-execute
-
-1. Build (inspect the transaction first):
-```json
-POST /api/build/natural
-{ "prompt": "Transfer 1 SOL to 9aE2...", "payer": "YOUR_PUBLIC_KEY" }
-```
-
-2. Execute:
-```json
-POST /api/execute
-{ "transaction": "base64_from_step_1", "privateKey": "base58_private_key" }
-```
-
-### Multi-transaction execute
-
-When `execute: true` is used with multi-intent prompts, ALL transactions are signed and sent. The response includes `signatures` and `explorerUrls` arrays.
-
-`/api/execute` also accepts an array of transactions:
-```json
-{ "transaction": ["base64_tx1", "base64_tx2"], "privateKey": "..." }
-```
-
-### Security notes
-
-- **HTTPS only** — never send private keys over unencrypted connections
-- Keys are used in-memory only, never logged or written to disk
-- Response includes `X-Solforge-Warning: private-key-provided` header when a key is used
-- If `execute` is false or `privateKey` is missing, SolForge behaves exactly as before (returns unsigned tx)
-
 ## Key Tips
 
 1. **Don't resolve tokens separately.** Just put the token name in the prompt — SolForge resolves it automatically via DexScreener.
