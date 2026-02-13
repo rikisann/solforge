@@ -18,6 +18,22 @@ import {
 
 const router = Router();
 
+// RPC proxy — keeps Helius API key server-side, browser calls /api/rpc instead of direct RPC
+router.post('/api/rpc', async (req: Request, res: Response) => {
+  try {
+    const rpcUrl = process.env.SOLANA_MAINNET_RPC || 'https://api.mainnet-beta.solana.com';
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(502).json({ jsonrpc: '2.0', error: { code: -32000, message: 'RPC proxy error' }, id: null });
+  }
+});
+
 // Apply middleware to all routes
 router.use(rateLimiter(
   parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
