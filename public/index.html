@@ -109,7 +109,7 @@
                     Natural Language → Solana Transactions
                 </h2>
                 <p class="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed">
-                    The universal Solana transaction builder powered by AI. Transform natural language into executable transactions across 12+ protocols. Built for developers, agents, and the future of blockchain interaction.
+                    The universal Solana transaction builder powered by AI. Transform natural language into executable transactions across 15+ protocols. Built for developers, agents, and the future of blockchain interaction.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
                     <a href="#demo" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/25">
@@ -186,6 +186,15 @@
                                 </button>
                                 <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Swap 0.5 SOL for USDC and tip 0.01 SOL to Jito')">
                                     <span class="text-orange-400">⛓️</span> Swap + Jito tip
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Supply 100 USDC to Kamino')">
+                                    <span class="text-green-400">🏦</span> Supply to Kamino
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Borrow 1 SOL on Marginfi')">
+                                    <span class="text-blue-400">💰</span> Borrow on Marginfi
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Repay 25 USDC on Solend')">
+                                    <span class="text-red-400">🔄</span> Repay on Solend
                                 </button>
                             </div>
                         </div>
@@ -292,9 +301,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
                         </svg>
                     </div>
-                    <h3 class="text-xl font-semibold mb-2 text-white">12+ Protocols</h3>
+                    <h3 class="text-xl font-semibold mb-2 text-white">15+ Protocols</h3>
                     <p class="text-slate-300 text-sm">
-                        Jupiter, Raydium, Orca, Marinade, Pump.fun, and more — all in one unified API.
+                        Jupiter, Raydium, Orca, Marinade, Pump.fun, Kamino, Marginfi, Solend, and more — all in one unified API.
                     </p>
                 </div>
                 
@@ -343,6 +352,18 @@
                     <h3 class="text-xl font-semibold mb-2 text-white">MCP Server</h3>
                     <p class="text-slate-300 text-sm">
                         Plug into any AI agent (Claude, GPT) via Model Context Protocol. Direct tool integration, no HTTP overhead.
+                    </p>
+                </div>
+
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-white">DeFi Lending</h3>
+                    <p class="text-slate-300 text-sm">
+                        Supply, borrow, repay, and withdraw across Kamino, Marginfi, and Solend protocols with natural language commands.
                     </p>
                 </div>
             </div>

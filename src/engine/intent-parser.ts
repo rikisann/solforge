@@ -13,6 +13,127 @@ interface ParsePattern {
 
 export class IntentParser {
   private static patterns: ParsePattern[] = [
+    // Lending patterns - Kamino
+    {
+      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on)\s+kamino/i,
+      protocol: 'kamino',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+kamino/i,
+      protocol: 'kamino',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+kamino/i,
+      protocol: 'kamino',
+      action: 'repay',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+kamino/i,
+      protocol: 'kamino',
+      action: 'withdraw',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Lending patterns - Marginfi
+    {
+      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on|into)\s+marginfi/i,
+      protocol: 'marginfi',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+marginfi/i,
+      protocol: 'marginfi',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+marginfi/i,
+      protocol: 'marginfi',
+      action: 'repay',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+marginfi/i,
+      protocol: 'marginfi',
+      action: 'withdraw',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Lending patterns - Solend
+    {
+      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:to|on)\s+solend/i,
+      protocol: 'solend',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /borrow\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|from)\s+solend/i,
+      protocol: 'solend',
+      action: 'borrow',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /(?:repay|pay\s+back)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:on|to)\s+solend/i,
+      protocol: 'solend',
+      action: 'repay',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    {
+      pattern: /withdraw\s+(\d+(?:\.\d+)?)\s+(\w+)\s+from\s+solend/i,
+      protocol: 'solend',
+      action: 'withdraw',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
+    // Generic lending patterns (default to Kamino)
+    {
+      pattern: /(?:supply|deposit|lend)\s+(\d+(?:\.\d+)?)\s+(\w+)/i,
+      protocol: 'kamino',
+      action: 'supply',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
     // Swap patterns - specific DEX mentions
     {
       pattern: /swap\s+(\d+(?:\.\d+)?)\s+(\w+)\s+(?:for|to)\s+(\w+)\s+on\s+raydium(?:\s+with(?:\s+less\s+than)?\s+(\d+(?:\.\d+)?)\s*%?\s+slippage)?/i,
@@ -960,7 +1081,7 @@ export class IntentParser {
     // Define conjunctions and separators that indicate multiple intents
     const separators = [
       // " and " followed by a verb
-      /\s+and\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw)\s+/gi,
+      /\s+and\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay)\s+/gi,
       // " then "
       /\s+then\s+/gi,
       // " also "
@@ -968,7 +1089,7 @@ export class IntentParser {
       // " + "
       /\s+\+\s+/gi,
       // ", " followed by a verb (comma + space + verb)
-      /,\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw)\s+/gi
+      /,\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw|supply|deposit|lend|borrow|repay)\s+/gi
     ];
 
     let segments = [prompt];
@@ -1290,7 +1411,11 @@ Rules:
       'token-2022 operations',
       'memo "message"',
       'tip X SOL',
-      'create token account'
+      'create token account',
+      'supply/deposit X TOKEN to kamino/marginfi/solend',
+      'borrow X TOKEN from kamino/marginfi/solend',
+      'repay X TOKEN on kamino/marginfi/solend',
+      'withdraw X TOKEN from kamino/marginfi/solend'
     ];
   }
 
@@ -1316,7 +1441,13 @@ Rules:
       orca_close: 'close orca position PositionNFT123...',
       meteora_add: 'add liquidity 1 SOL and 100 USDC to meteora',
       meteora_remove: 'remove 50% liquidity from meteora position Position123...',
-      tip: 'tip 0.0001 SOL'
+      tip: 'tip 0.0001 SOL',
+      kamino_supply: 'supply 100 USDC to Kamino',
+      kamino_borrow: 'borrow 1 SOL on Kamino',
+      marginfi_supply: 'deposit 500 USDC into Marginfi',
+      marginfi_borrow: 'borrow 0.5 SOL from Marginfi',
+      solend_repay: 'repay 25 USDC on Solend',
+      solend_withdraw: 'withdraw 100 USDC from Solend'
     };
   }
 }

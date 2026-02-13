@@ -13,6 +13,9 @@ import { MarinadeProtocol } from './marinade';
 import { MeteoraProtocol } from './meteora';
 import { Token2022Protocol } from './token2022';
 import { StakeProtocol } from './stake';
+import { KaminoProtocol } from './kamino';
+import { MarginfiProtocol } from './marginfi';
+import { SolendProtocol } from './solend';
 
 export class ProtocolRegistry {
   private static handlers: Map<string, ProtocolHandler> = new Map();
@@ -31,6 +34,9 @@ export class ProtocolRegistry {
     this.register(new MeteoraProtocol());
     this.register(new Token2022Protocol());
     this.register(new StakeProtocol());
+    this.register(new KaminoProtocol());
+    this.register(new MarginfiProtocol());
+    this.register(new SolendProtocol());
   }
 
   static register(handler: ProtocolHandler): void {
@@ -84,5 +90,8 @@ export {
   MarinadeProtocol,
   MeteoraProtocol,
   Token2022Protocol,
-  StakeProtocol
+  StakeProtocol,
+  KaminoProtocol,
+  MarginfiProtocol,
+  SolendProtocol
 };
