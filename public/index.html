@@ -157,6 +157,36 @@
                             </div>
                         </div>
 
+                        <!-- Example Prompts -->
+                        <div class="space-y-3">
+                            <p class="text-sm text-slate-400 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Try an example prompt:
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Ape 2 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
+                                    <span class="text-orange-400">🔥</span> Ape 2 SOL into BONK
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Convert 100 USDC to SOL with 0.5% slippage')">
+                                    <span class="text-blue-400">💱</span> Convert 100 USDC to SOL
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Liquid stake 10 SOL with Marinade')">
+                                    <span class="text-purple-400">🥩</span> Liquid stake with Marinade
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Write onchain memo: gm from SolForge')">
+                                    <span class="text-green-400">📝</span> Write onchain memo
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Swap 5 SOL for BONK on Jupiter')">
+                                    <span class="text-yellow-400">🔄</span> Swap SOL for BONK
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Buy 1 SOL of pair JDDgQhrQDie1AHAYRqpKW68EiZQpGfmJaNdZrqabAguq')">
+                                    <span class="text-pink-400">💎</span> Buy SOL of pair
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Wallet Connection -->
                         <div class="space-y-3">
                             <label class="block text-sm font-medium text-slate-200">Wallet Connection</label>
@@ -249,6 +279,12 @@
                     <!-- Output Section -->
                     <div class="mt-8 space-y-4">
                         <label class="block text-sm font-medium text-slate-200">Transaction Output</label>
+                        
+                        <!-- Transaction Preview Card -->
+                        <div id="transaction-preview" class="hidden bg-slate-800 border border-slate-700 rounded-xl p-6 animate-fade-in">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                        
                         <div class="relative">
                             <div id="demo-output" class="code-highlight border border-slate-600 rounded-xl p-6 min-h-[200px] font-mono text-sm text-slate-300 whitespace-pre-wrap overflow-x-auto">
                                 Click "Build Transaction" to see the API response...
@@ -1342,6 +1378,7 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
             const buildBtn = document.getElementById('build-btn');
             const signBtn = document.getElementById('sign-send-btn');
             const resultDiv = document.getElementById('transaction-result');
+            const previewDiv = document.getElementById('transaction-preview');
             
             const prompt = promptInput.value.trim();
             const payer = payerInput.value.trim();
@@ -1355,6 +1392,7 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
             // Hide previous results
             signBtn.classList.add('hidden');
             resultDiv.classList.add('hidden');
+            previewDiv.classList.add('hidden');
             lastTransactionData = null;
             
             // Show loading state
@@ -1383,14 +1421,31 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
                 
                 const data = await response.json();
                 
-                // Display the response
-                outputDiv.textContent = JSON.stringify(data, null, 2);
-                outputDiv.classList.remove('text-emerald-400');
-                if (!response.ok) {
+                // Show transaction preview card if successful
+                if (response.ok && data.success && data.details && data.details.parsedIntent) {
+                    showTransactionPreview(data.details);
+                }
+                
+                // Display the response with enhanced error formatting
+                if (!response.ok && data.error) {
+                    // Format error with suggestions
+                    let errorDisplay = `❌ Error: ${data.error}\n\n`;
+                    if (data.suggestions && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+                        errorDisplay += `💡 Suggestions:\n`;
+                        data.suggestions.forEach(suggestion => {
+                            errorDisplay += `  • ${suggestion}\n`;
+                        });
+                        errorDisplay += '\n';
+                    }
+                    errorDisplay += `Full response:\n${JSON.stringify(data, null, 2)}`;
+                    outputDiv.textContent = errorDisplay;
                     outputDiv.classList.add('text-red-400');
                 } else {
+                    // Normal success response
+                    outputDiv.textContent = JSON.stringify(data, null, 2);
                     outputDiv.classList.add('text-slate-300');
                 }
+                outputDiv.classList.remove('text-emerald-400');
 
                 // Show Sign & Send button if successful and wallet is connected
                 if (response.ok && data.success && data.transaction && connectedWallet) {
@@ -1407,6 +1462,131 @@ curl "https://api.solforge.dev/api/resolve?query=DezXAZ8z7PnrnRJjz3wXBoRgixCa6xj
                 buildBtn.disabled = false;
                 buildBtn.textContent = 'Build Transaction';
             }
+        }
+
+        // Show transaction preview card
+        function showTransactionPreview(details) {
+            const previewDiv = document.getElementById('transaction-preview');
+            const parsedIntent = details.parsedIntent;
+            const protocol = details.protocol || parsedIntent.protocol;
+            const action = parsedIntent.action;
+            const params = parsedIntent.params;
+            const confidence = details.confidence || parsedIntent.confidence;
+            const resolvedDex = details.resolvedDex;
+            
+            let previewHTML = '';
+            let icon = '';
+            let title = '';
+            let rows = [];
+            
+            // Generate preview based on action type
+            if (action === 'swap' || action === 'buy' || action === 'sell' || protocol === 'jupiter' || resolvedDex) {
+                icon = '💱';
+                title = 'Swap Transaction';
+                
+                const fromToken = formatTokenSymbol(params.from);
+                const toToken = formatTokenSymbol(params.to);
+                const amount = formatAmount(params.amount);
+                const displayProtocol = resolvedDex ? `Jupiter (via ${capitalizeProtocol(resolvedDex)})` : capitalizeProtocol(protocol);
+                
+                rows = [
+                    `From: ${amount} ${fromToken} → To: ${toToken}`,
+                    `Protocol: ${displayProtocol}`,
+                    params.slippage ? `Slippage: ${params.slippage}%` : null,
+                    confidence ? `Confidence: ${Math.round(confidence * 100)}%` : null
+                ].filter(Boolean);
+                
+            } else if (action === 'memo') {
+                icon = '📝';
+                title = 'Memo Transaction';
+                rows = [
+                    `Message: "${params.message}"`,
+                    'Protocol: Memo Program'
+                ];
+                
+            } else if (action === 'stake' && (protocol === 'marinade' || params.protocol === 'marinade')) {
+                icon = '🥩';
+                title = 'Liquid Staking';
+                rows = [
+                    `Amount: ${formatAmount(params.amount)} SOL → mSOL`,
+                    'Protocol: Marinade'
+                ];
+                
+            } else if (action === 'transfer') {
+                icon = '💸';
+                title = 'SOL Transfer';
+                rows = [
+                    `Amount: ${formatAmount(params.amount)} SOL`,
+                    `To: ${formatAddress(params.to)}`
+                ];
+                
+            } else {
+                // Generic fallback
+                icon = '⚡';
+                title = `${capitalizeProtocol(action)} Transaction`;
+                rows = [
+                    `Protocol: ${capitalizeProtocol(protocol)}`,
+                    confidence ? `Confidence: ${Math.round(confidence * 100)}%` : null
+                ].filter(Boolean);
+            }
+            
+            previewHTML = `
+                <div class="flex items-center mb-4">
+                    <div class="text-2xl mr-3">${icon}</div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">${title}</h3>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
+                            <span class="text-emerald-400 text-sm font-medium">Successfully built</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid gap-2">
+                    ${rows.map(row => `<div class="text-slate-300 text-sm">${row}</div>`).join('')}
+                </div>
+            `;
+            
+            previewDiv.innerHTML = previewHTML;
+            previewDiv.classList.remove('hidden');
+        }
+        
+        // Helper functions for formatting
+        function formatTokenSymbol(address) {
+            const tokenMap = {
+                'So11111111111111111111111111111111111111112': 'SOL',
+                'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+                'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT',
+                'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': 'BONK'
+            };
+            return tokenMap[address] || (address && address.length > 10 ? `${address.slice(0, 4)}...${address.slice(-4)}` : address);
+        }
+        
+        function formatAmount(amount) {
+            if (typeof amount === 'number') {
+                return amount % 1 === 0 ? amount.toString() : amount.toFixed(6).replace(/\.?0+$/, '');
+            }
+            return amount;
+        }
+        
+        function formatAddress(address) {
+            if (!address || address.length < 10) return address;
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        }
+        
+        function capitalizeProtocol(protocol) {
+            if (!protocol) return '';
+            const protocolMap = {
+                'jupiter': 'Jupiter',
+                'raydium': 'Raydium',
+                'orca': 'Orca',
+                'marinade': 'Marinade',
+                'pumpfun': 'Pump.fun',
+                'meteora': 'Meteora',
+                'memo': 'Memo',
+                'system': 'System',
+                'spl-token': 'SPL Token'
+            };
+            return protocolMap[protocol.toLowerCase()] || protocol.charAt(0).toUpperCase() + protocol.slice(1);
         }
         
         // Smooth scrolling for anchor links

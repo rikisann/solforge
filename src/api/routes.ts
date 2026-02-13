@@ -66,13 +66,72 @@ router.post('/api/build', validateBuildIntent, async (req: Request, res: Respons
   }
 });
 
+// Helper function to generate actionable suggestions based on error message
+function generateErrorSuggestions(error: string, parsedIntent?: any): string[] {
+  const suggestions: string[] = [];
+  const errorLower = error.toLowerCase();
+
+  // Insufficient funds errors
+  if (errorLower.includes('insufficient lamports') || errorLower.includes('insufficient funds')) {
+    suggestions.push("Try a smaller amount");
+    suggestions.push("Make sure your wallet has enough SOL");
+  }
+  
+  // Account not found errors
+  else if (errorLower.includes('accountnotfound') || errorLower.includes('account not found')) {
+    suggestions.push("The wallet may not have a token account for this token");
+    suggestions.push("Try with skipSimulation: true");
+  }
+  
+  // Token resolution errors
+  else if (errorLower.includes('token not found') || errorLower.includes('could not resolve')) {
+    suggestions.push("Use the full mint address instead of symbol");
+    suggestions.push("Check the address on solscan.io");
+  }
+  
+  // Blockhash errors
+  else if (errorLower.includes('blockhash not found') || errorLower.includes('blockhash')) {
+    suggestions.push("The transaction expired, try again");
+  }
+  
+  // Simulation errors
+  else if (errorLower.includes('simulation failed')) {
+    suggestions.push("Try with skipSimulation: true for testing");
+    suggestions.push("Make sure wallet is funded");
+  }
+  
+  // Intent parsing errors - low confidence or no intent parsed
+  else if (errorLower.includes('could not parse intent') || 
+           errorLower.includes('parse intent') || 
+           (parsedIntent && parsedIntent.confidence < 0.7)) {
+    suggestions.push("Try a simpler prompt like 'swap 1 SOL for USDC'");
+    suggestions.push("Use the full token mint address");
+  }
+  
+  // Jupiter-specific errors
+  else if (errorLower.includes('jupiter')) {
+    suggestions.push("Token may not have enough liquidity");
+    suggestions.push("Try a different token pair");
+  }
+  
+  // Generic fallback for other errors
+  else if (suggestions.length === 0) {
+    suggestions.push("Check that all addresses are valid");
+    suggestions.push("Try with a different wallet or smaller amount");
+  }
+
+  return suggestions;
+}
+
 // Build transaction from natural language
 router.post('/api/build/natural', validateNaturalIntent, async (req: Request, res: Response) => {
+  let parsedIntent: any = null;
+  
   try {
     const naturalIntent: NaturalLanguageIntent = req.body;
     
     // Parse natural language to structured intent (async to resolve token addresses via DexScreener)
-    const parsedIntent = await IntentParser.parseNaturalLanguageAsync(naturalIntent);
+    parsedIntent = await IntentParser.parseNaturalLanguageAsync(naturalIntent);
     
     // Map resolved protocol + action to the correct intent name for the builder
     const resolvedIntent = mapToBuilderIntent(parsedIntent.protocol, parsedIntent.action);
@@ -150,6 +209,15 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
       } catch (jupiterError) {
         // Fall back to regular transaction building if Jupiter fails
         console.warn('Jupiter routing failed, falling back to direct protocol handler:', jupiterError);
+        
+        // If Jupiter fails, return error with suggestions
+        const errorMessage = jupiterError instanceof Error ? jupiterError.message : 'Jupiter swap failed';
+        res.status(400).json({
+          success: false,
+          error: errorMessage,
+          suggestions: generateErrorSuggestions(errorMessage, parsedIntent)
+        });
+        return;
       }
     }
 
@@ -164,9 +232,11 @@ router.post('/api/build/natural', validateNaturalIntent, async (req: Request, re
     
     res.json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to parse intent';
     res.status(400).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to parse intent'
+      error: errorMessage,
+      suggestions: generateErrorSuggestions(errorMessage, parsedIntent)
     });
   }
 });

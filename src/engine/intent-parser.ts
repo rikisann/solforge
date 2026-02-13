@@ -68,7 +68,18 @@ export class IntentParser {
         token: 'SOL'
       })
     },
-    // Transfer token patterns
+    // Transfer token patterns - with full addresses (longer addresses first)
+    {
+      pattern: /(?:send|transfer)\s+(\d+(?:\.\d+)?)\s+([1-9A-HJ-NP-Za-km-z]{32,44})\s+to\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'spl-token',
+      action: 'transfer',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2],
+        to: match[3]
+      })
+    },
+    // Transfer token patterns - with token symbols
     {
       pattern: /(?:send|transfer)\s+(\d+(?:\.\d+)?)\s+(\w+)\s+to\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
       protocol: 'spl-token',
@@ -115,7 +126,42 @@ export class IntentParser {
         token: match[1] ? match[1].toUpperCase() : null
       })
     },
-    // Tip patterns
+    // Close token account patterns
+    {
+      pattern: /close\s+(?:my\s+)?(\w+)\s+(?:token\s+)?account/i,
+      protocol: 'spl-token',
+      action: 'close',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // Create ATA patterns
+    {
+      pattern: /create\s+(?:token\s+account|ata)\s+for\s+([1-9A-HJ-NP-Za-km-z]{32,44})/i,
+      protocol: 'spl-token',
+      action: 'create-ata',
+      extractor: (match) => ({
+        token: match[1]
+      })
+    },
+    {
+      pattern: /create\s+(?:token\s+account|ata)\s+for\s+(\w+)/i,
+      protocol: 'spl-token',
+      action: 'create-ata',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // Jito tip patterns - "tip X SOL to Jito"
+    {
+      pattern: /tip\s+(\d+(?:\.\d+)?)\s+sol\s+to\s+jito/i,
+      protocol: 'jito',
+      action: 'tip',
+      extractor: (match) => ({
+        amount: parseFloat(match[1])
+      })
+    },
+    // Tip patterns - existing and enhanced
     {
       pattern: /(?:tip|jito\s+tip)\s+(\d+(?:\.\d+)?)\s*(?:sol|lamports)?/i,
       protocol: 'jito',
@@ -301,6 +347,30 @@ export class IntentParser {
         slippage: match[4] ? parseFloat(match[4]) : 0.5
       })
     },
+    // "change all SOL to USDC"
+    {
+      pattern: /change\s+all\s+(\w+)\s+to\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        from: match[1].toUpperCase(),
+        to: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : 0.5
+      })
+    },
+    // "convert all SOL to USDC"
+    {
+      pattern: /convert\s+all\s+(\w+)\s+to\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
+      protocol: 'jupiter',
+      action: 'swap',
+      extractor: (match) => ({
+        amount: -1, // Special flag for "all"
+        from: match[1].toUpperCase(),
+        to: match[2].toUpperCase(),
+        slippage: match[3] ? parseFloat(match[3]) : 0.5
+      })
+    },
     // "trade 1 SOL for USDC"
     {
       pattern: /trade\s+(\d+(?:\.\d+)?)\s+(\w+)\s+for\s+(\w+)(?:\s+with\s+(\d+(?:\.\d+)?)\s*%?\s*slippage)?/i,
@@ -376,9 +446,28 @@ export class IntentParser {
         pool: match[1]
       })
     },
+    // "unstake 5 mSOL from marinade" - specific amount
+    {
+      pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(\w*sol)\s+from\s+marinade/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        amount: parseFloat(match[1]),
+        token: match[2].toUpperCase()
+      })
+    },
     // "unstake my SOL from marinade"
     {
       pattern: /unstake\s+(?:my\s+)?(\w+)\s+from\s+marinade/i,
+      protocol: 'marinade',
+      action: 'unstake',
+      extractor: (match) => ({
+        token: match[1].toUpperCase()
+      })
+    },
+    // "unstake my SOL" - generic unstake
+    {
+      pattern: /unstake\s+my\s+(\w+)/i,
       protocol: 'marinade',
       action: 'unstake',
       extractor: (match) => ({
@@ -557,6 +646,73 @@ export class IntentParser {
    * Async version that resolves token addresses via DexScreener API.
    * Use this when you need dynamic protocol resolution.
    */
+  static parseMultipleIntents(prompt: string): ParsedIntent[] {
+    // Split the prompt on common conjunctions/separators
+    const segments = this._splitPrompt(prompt);
+    
+    if (segments.length === 1) {
+      // No splitting occurred, return single intent
+      const intent: NaturalLanguageIntent = {
+        prompt: prompt.trim(),
+        payer: '', // Will be filled in by caller
+        network: 'mainnet'
+      };
+      return [this._parseSync(intent)];
+    }
+    
+    // Parse each segment
+    const intents: ParsedIntent[] = [];
+    for (const segment of segments) {
+      const intent: NaturalLanguageIntent = {
+        prompt: segment.trim(),
+        payer: '', // Will be filled in by caller
+        network: 'mainnet'
+      };
+      try {
+        const parsed = this._parseSync(intent);
+        intents.push(parsed);
+      } catch (error) {
+        // If one segment fails to parse, continue with others
+        console.warn(`Failed to parse segment "${segment}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    return intents;
+  }
+
+  static async parseMultipleIntentsAsync(prompt: string, payer: string): Promise<ParsedIntent[]> {
+    const segments = this._splitPrompt(prompt);
+    
+    if (segments.length === 1) {
+      // No splitting occurred, return single intent
+      const intent: NaturalLanguageIntent = {
+        prompt: prompt.trim(),
+        payer,
+        network: 'mainnet'
+      };
+      return [await this.parseNaturalLanguageAsync(intent)];
+    }
+    
+    // Parse each segment asynchronously
+    const intents: ParsedIntent[] = [];
+    for (const segment of segments) {
+      const intent: NaturalLanguageIntent = {
+        prompt: segment.trim(),
+        payer,
+        network: 'mainnet'
+      };
+      try {
+        const parsed = await this.parseNaturalLanguageAsync(intent);
+        intents.push(parsed);
+      } catch (error) {
+        // If one segment fails to parse, continue with others
+        console.warn(`Failed to parse segment "${segment}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    return intents;
+  }
+
   static async parseNaturalLanguageAsync(intent: NaturalLanguageIntent): Promise<ParsedIntent> {
     const result = this._parseSync(intent);
 
@@ -606,6 +762,57 @@ export class IntentParser {
     }
 
     return result;
+  }
+
+  private static _splitPrompt(prompt: string): string[] {
+    // Define conjunctions and separators that indicate multiple intents
+    const separators = [
+      // " and " followed by a verb
+      /\s+and\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw)\s+/gi,
+      // " then "
+      /\s+then\s+/gi,
+      // " also "
+      /\s+also\s+/gi,
+      // " + "
+      /\s+\+\s+/gi,
+      // ", " followed by a verb (comma + space + verb)
+      /,\s+(swap|send|transfer|tip|stake|buy|sell|ape|memo|write|create|close|dump|convert|trade|exchange|liquid\s+stake|unstake|provide|add|remove|open|native\s+stake|deactivate|withdraw)\s+/gi
+    ];
+
+    let segments = [prompt];
+
+    // Apply each separator pattern
+    for (const separator of separators) {
+      const newSegments: string[] = [];
+      
+      for (const segment of segments) {
+        const parts = segment.split(separator);
+        if (parts.length > 1) {
+          // Found a separator, split this segment
+          for (let i = 0; i < parts.length; i++) {
+            if (i === 0) {
+              newSegments.push(parts[i].trim());
+            } else {
+              // Re-add the verb that was consumed by the regex split
+              const match = segment.match(separator);
+              if (match) {
+                const verb = match[0].trim().replace(/^(and|then|also|\+|,)\s+/i, '');
+                newSegments.push((verb + ' ' + parts[i]).trim());
+              } else {
+                newSegments.push(parts[i].trim());
+              }
+            }
+          }
+        } else {
+          newSegments.push(segment);
+        }
+      }
+      
+      segments = newSegments;
+    }
+
+    // Filter out empty segments
+    return segments.filter(segment => segment.trim().length > 0);
   }
 
   private static _parseSync(intent: NaturalLanguageIntent): ParsedIntent {

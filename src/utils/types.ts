@@ -25,6 +25,13 @@ export interface BuildResponse {
   simulation?: SimulationResult;
   details?: TransactionDetails;
   error?: string;
+  multi?: boolean; // Indicates if this is a multi-transaction response
+  transactions?: Array<{
+    transaction: string;
+    details: TransactionDetails;
+    simulation?: SimulationResult;
+  }>;
+  summary?: string; // Human-readable summary for multi-transaction responses
 }
 
 export interface SimulationResult {
