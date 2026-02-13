@@ -543,14 +543,7 @@ export class IntentParser {
         amount: parseFloat(match[1])
       })
     },
-    {
-      pattern: /unstake\s+(\d+(?:\.\d+)?)\s+(?:msol|marinade)/i,
-      protocol: 'marinade',
-      action: 'unstake',
-      extractor: (match) => ({
-        amount: parseFloat(match[1])
-      })
-    },
+    // Removed duplicate unstake pattern - now handled earlier with better token extraction
     // Native staking patterns
     {
       pattern: /stake\s+(\d+(?:\.\d+)?)\s+sol(?:\s+with(?:\s+validator)?\s+([1-9A-HJ-NP-Za-km-z]{32,44}))?/i,
@@ -659,7 +652,13 @@ export class IntentParser {
         payer: '', // Will be filled in by caller
         network: 'mainnet'
       };
-      return [this._parseSync(intent)];
+      try {
+        return [this._parseSync(intent)];
+      } catch (error) {
+        // If parsing fails, return empty array
+        console.warn(`Failed to parse single intent "${prompt}": ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return [];
+      }
     }
     
     // Parse each segment

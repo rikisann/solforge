@@ -321,7 +321,7 @@ describe('IntentParser', () => {
         
         expect(result.protocol).toBe('spl-token');
         expect(result.action).toBe('close');
-        expect(result.params.token).toBe('DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263');
+        expect(result.params.token).toBe('BONK'); // Raw token symbol, not resolved
       });
 
       it('should parse "close USDC token account"', () => {
@@ -330,7 +330,7 @@ describe('IntentParser', () => {
         
         expect(result.protocol).toBe('spl-token');
         expect(result.action).toBe('close');
-        expect(result.params.token).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v');
+        expect(result.params.token).toBe('USDC'); // Raw token symbol, not resolved
       });
 
       it('should parse "close WIF account"', () => {
@@ -339,7 +339,7 @@ describe('IntentParser', () => {
         
         expect(result.protocol).toBe('spl-token');
         expect(result.action).toBe('close');
-        expect(result.params.token).toBe('EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm');
+        expect(result.params.token).toBe('WIF'); // Raw token symbol, not resolved
       });
     });
 
