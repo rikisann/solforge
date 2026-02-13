@@ -491,21 +491,28 @@
                         />
                     </div>
                     
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👆 Try an example prompt:</p>
                     <div class="examples-grid">
                         <button class="example-btn" onclick="setExample('Transfer 0.1 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU')">
-                            Transfer 0.1 SOL to 7xKX...AsU
+                            💸 Transfer SOL
                         </button>
                         <button class="example-btn" onclick="setExample('Swap 1 SOL for USDC')">
-                            Swap 1 SOL for USDC
+                            🔄 Swap on Jupiter
                         </button>
                         <button class="example-btn" onclick="setExample('Write memo: Hello from SolForge!')">
-                            Write memo: Hello from SolForge!
+                            📝 Write Memo
                         </button>
                         <button class="example-btn" onclick="setExample('Tip 0.001 SOL for MEV protection')">
-                            Tip 0.001 SOL for MEV protection
+                            ⚡ Jito MEV Tip
                         </button>
                         <button class="example-btn" onclick="setExample('Stake 5 SOL with Marinade')">
-                            Stake 5 SOL with Marinade
+                            🥩 Stake with Marinade
+                        </button>
+                        <button class="example-btn" onclick="setExample('Buy 0.5 SOL of token on pump.fun')">
+                            🚀 Pump.fun Buy
+                        </button>
+                        <button class="example-btn" onclick="setExample('Swap 10 USDC for SOL on Raydium')">
+                            🌊 Raydium Swap
                         </button>
                     </div>
                     
@@ -692,9 +699,12 @@
     </footer>
 
     <script>
-        // Set example in the form
+        // Set example in the form and auto-build
         function setExample(text) {
             document.getElementById('prompt-input').value = text;
+            document.getElementById('prompt-input').focus();
+            // Auto-trigger build so the user sees it work immediately
+            buildTransaction();
         }
 
         // Build transaction via API
