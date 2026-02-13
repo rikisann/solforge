@@ -337,8 +337,77 @@
         </div>
     </section>
 
+    <!-- MCP Integration Section -->
+    <section class="py-20 bg-slate-800 border-t border-slate-700">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">🔌 MCP Server</h2>
+                <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                    Plug SolForge into any AI agent via the <a href="https://modelcontextprotocol.io" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">Model Context Protocol</a>. No REST calls needed — direct tool integration.
+                </p>
+            </div>
+            
+            <div class="max-w-4xl mx-auto space-y-8">
+                <!-- Setup -->
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6">
+                    <h3 class="text-xl font-semibold text-white mb-4">Quick Setup</h3>
+                    <p class="text-slate-300 text-sm mb-4">Add to your <code class="text-emerald-400 bg-slate-800 px-1.5 py-0.5 rounded">claude_desktop_config.json</code>:</p>
+                    <pre class="bg-slate-950 rounded-lg p-4 text-sm font-mono text-slate-300 overflow-x-auto">{
+  "mcpServers": {
+    "solforge": {
+      "command": "node",
+      "args": ["/path/to/solforge/dist/mcp.js"],
+      "env": {
+        "SOLANA_MAINNET_RPC": "your_rpc_url",
+        "JUPITER_API_URL": "https://lite-api.jup.ag/swap/v1"
+      }
+    }
+  }
+}</pre>
+                </div>
+
+                <!-- Tools Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <div class="flex items-center mb-2">
+                            <span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 text-xs font-bold font-mono rounded mr-2">⭐</span>
+                            <span class="font-mono text-sm text-white">build_transaction_natural</span>
+                        </div>
+                        <p class="text-slate-400 text-sm">Natural language → ready-to-sign transaction. The main tool.</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <span class="font-mono text-sm text-white block mb-2">build_transaction</span>
+                        <p class="text-slate-400 text-sm">Structured intent builder for programmatic use.</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <span class="font-mono text-sm text-white block mb-2">resolve_token</span>
+                        <p class="text-slate-400 text-sm">Look up any token or pair via DexScreener.</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <span class="font-mono text-sm text-white block mb-2">list_protocols</span>
+                        <p class="text-slate-400 text-sm">See all 12+ supported Solana protocols.</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <span class="font-mono text-sm text-white block mb-2">estimate_transaction</span>
+                        <p class="text-slate-400 text-sm">Check fees and compute units before building.</p>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-700 rounded-xl p-5">
+                        <span class="font-mono text-sm text-white block mb-2">decode_transaction</span>
+                        <p class="text-slate-400 text-sm">Decode any base64 Solana transaction.</p>
+                    </div>
+                </div>
+
+                <!-- Skill file callout -->
+                <div class="bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-700/50 rounded-xl p-6 text-center">
+                    <p class="text-slate-200 mb-2">Want your AI agent to use SolForge without MCP setup?</p>
+                    <p class="text-slate-300 text-sm">Copy <a href="https://github.com/rikisann/solforge/blob/main/SOLFORGE_SKILL.md" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline font-mono">SOLFORGE_SKILL.md</a> into your agent's context — it instantly learns all endpoints and best practices.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- API Reference Section -->
-    <section id="api" class="py-20 bg-slate-800">
+    <section id="api" class="py-20 bg-slate-900">
         <div class="container mx-auto px-6">
             <div class="text-center mb-12">
                 <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">API Reference</h2>
