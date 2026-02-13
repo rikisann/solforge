@@ -6,792 +6,438 @@
     <title>SolForge 🔥 - Universal Solana Transaction Builder</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'ui-sans-serif', 'system-ui'],
+                        'mono': ['JetBrains Mono', 'ui-monospace', 'monospace'],
+                    },
+                    colors: {
+                        'primary': {
+                            50: '#f0fdf4',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        },
+                        'accent': '#06d6a0',
+                        'cyan': {
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-soft': 'pulseSoft 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        pulseSoft: {
+                            '0%, 100%': { opacity: '0.4' },
+                            '50%': { opacity: '0.8' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg-primary: #0a0a0a;
-            --bg-secondary: #111111;
-            --bg-card: #1a1a1a;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0a0;
-            --text-muted: #666666;
-            --accent: #00ff88;
-            --accent-dark: #00cc6a;
-            --border: #333333;
-            --border-hover: #555555;
-            --error: #ff5555;
-            --warning: #ffaa55;
-            --success: #00ff88;
+        .gradient-bg {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        .mono {
-            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
-            position: relative;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: 
-                radial-gradient(circle at 25% 25%, rgba(0, 255, 136, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(0, 255, 136, 0.03) 0%, transparent 50%);
-            animation: pulse 8s ease-in-out infinite alternate;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.3; }
-            100% { opacity: 1; }
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .logo {
-            font-size: 4rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, var(--accent) 0%, #ffffff 100%);
+        .gradient-text {
+            background: linear-gradient(135deg, #06d6a0 0%, #22d3ee 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
-        .tagline {
-            font-size: 2rem;
-            font-weight: 500;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
+        .gradient-border {
+            background: linear-gradient(135deg, #06d6a0, #22d3ee);
+            padding: 1px;
+            border-radius: 0.75rem;
         }
-
-        .subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 3rem;
+        .gradient-border-content {
+            background: rgb(30 41 59);
+            border-radius: 0.625rem;
         }
-
-        .hero-cta {
-            display: inline-flex;
-            gap: 1rem;
-            align-items: center;
+        .code-highlight {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         }
-
-        .btn {
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 500;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            font-size: 1rem;
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
-            color: var(--bg-primary);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            border: 2px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .btn-wallet {
-            background: transparent;
-            border: 2px solid var(--accent);
-            color: var(--accent);
-        }
-
-        .btn-wallet:hover {
-            background: rgba(0, 255, 136, 0.1);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-
-        .btn-wallet.connected {
-            background: rgba(0, 255, 136, 0.1);
-            border-color: var(--accent);
-        }
-
-        .btn-sign {
-            background: linear-gradient(135deg, #ffaa55 0%, #ff8800 100%);
-            color: #000;
-            font-weight: 600;
-        }
-
-        .btn-sign:hover {
-            background: linear-gradient(135deg, #ff8800 0%, #cc6600 100%);
-            box-shadow: 0 10px 30px rgba(255, 170, 85, 0.3);
-        }
-
-        .wallet-status {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .wallet-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--accent);
-        }
-
-        .wallet-address {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-        }
-
-        .transaction-result {
-            background: rgba(0, 255, 136, 0.1);
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-        }
-
-        .transaction-result a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .transaction-result a:hover {
-            text-decoration: underline;
-        }
-
-        .wallet-not-found {
-            background: rgba(255, 85, 85, 0.1);
-            border: 1px solid var(--error);
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            text-align: center;
-        }
-
-        .wallet-not-found a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        /* Section Styling */
-        .section {
-            padding: 5rem 0;
-        }
-
-        .section-title {
-            font-size: 2.5rem;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-        }
-
-        .section-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            text-align: center;
-            max-width: 600px;
-            margin: 0 auto 3rem;
-        }
-
-        /* Interactive Demo */
-        .demo {
-            background: var(--bg-secondary);
-        }
-
-        .demo-container {
-            background: var(--bg-card);
-            border-radius: 12px;
-            padding: 2rem;
-            border: 1px solid var(--border);
-        }
-
-        .demo-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-label {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .form-input {
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
-        }
-
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .examples-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .example-btn {
-            padding: 0.75rem 1rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .example-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            background: rgba(0, 255, 136, 0.05);
-        }
-
-        .demo-output {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            min-height: 200px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            white-space: pre-wrap;
-            overflow-x: auto;
-        }
-
-        .loading {
-            color: var(--accent);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .error {
-            color: var(--error);
-        }
-
-        /* Protocols Grid */
-        .protocols-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-
-        .protocol-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .protocol-card:hover {
-            border-color: var(--accent);
+        .hover-lift:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
-
-        .protocol-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-
-        .protocol-description {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        /* API Reference */
-        .api-reference {
-            background: var(--bg-secondary);
-        }
-
-        .api-endpoints {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .endpoint {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .endpoint:hover {
-            border-color: var(--border-hover);
-        }
-
-        .endpoint-method {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
-            margin-right: 1rem;
-        }
-
-        .method-get {
-            background: rgba(0, 255, 136, 0.2);
-            color: var(--accent);
-        }
-
-        .method-post {
-            background: rgba(255, 170, 85, 0.2);
-            color: var(--warning);
-        }
-
-        .endpoint-path {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .endpoint-description {
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-
-        /* Footer */
-        .footer {
-            padding: 3rem 0;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            color: var(--text-secondary);
-        }
-
-        .footer-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .footer a {
-            color: var(--accent);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .footer a:hover {
-            color: var(--text-primary);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .logo {
-                font-size: 2.5rem;
-            }
-            
-            .tagline {
-                font-size: 1.5rem;
-            }
-            
-            .subtitle {
-                font-size: 1rem;
-                margin-bottom: 2rem;
-            }
-            
-            .hero-cta {
-                flex-direction: column;
-                width: 100%;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .section-title {
-                font-size: 2rem;
-            }
-            
-            .demo-container {
-                padding: 1.5rem;
-            }
-            
-            .examples-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .protocols-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 0 15px;
-            }
-            
-            .logo {
-                font-size: 2rem;
-            }
-            
-            .tagline {
-                font-size: 1.2rem;
-            }
-            
-            .section {
-                padding: 3rem 0;
-            }
+        .mono {
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
         }
     </style>
 </head>
-<body>
+<body class="bg-slate-900 text-white font-sans overflow-x-hidden">
     <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="logo">SolForge 🔥</h1>
-                <h2 class="tagline">Any Protocol. Any Instruction. One API.</h2>
-                <p class="subtitle">
-                    The universal Solana transaction builder for AI agents. 12 protocols, natural language support, 
-                    built for the Colosseum Agent Hackathon.
+    <section class="min-h-screen gradient-bg flex items-center justify-center relative overflow-hidden">
+        <!-- Background elements -->
+        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-cyan-500/10 animate-pulse-soft"></div>
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl animate-pulse-soft"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl animate-pulse-soft"></div>
+        
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="text-center animate-fade-in">
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 gradient-text">
+                    SolForge 🔥
+                </h1>
+                <h2 class="text-2xl md:text-3xl lg:text-4xl font-medium mb-6 text-slate-200">
+                    Natural Language → Solana Transactions
+                </h2>
+                <p class="text-lg md:text-xl text-slate-300 max-w-3xl mx-auto mb-12 leading-relaxed">
+                    The universal Solana transaction builder powered by AI. Transform natural language into executable transactions across 12+ protocols. Built for developers, agents, and the future of blockchain interaction.
                 </p>
-                <div class="hero-cta">
-                    <a href="#demo" class="btn btn-primary">Try Interactive Demo</a>
-                    <a href="#protocols" class="btn btn-secondary">View Protocols</a>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <a href="#demo" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/25">
+                        <span>Try Interactive Demo</span>
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                    </a>
+                    <a href="#api" class="inline-flex items-center px-8 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105">
+                        <span>View API Docs</span>
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                    </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Interactive Demo Section -->
-    <section id="demo" class="section demo">
-        <div class="container">
-            <h2 class="section-title">Interactive Demo</h2>
-            <p class="section-subtitle">
-                Try real Solana operations with natural language. Paste any token address or pair — SolForge auto-detects the protocol via DexScreener.
-            </p>
+    <!-- Demo Section -->
+    <section id="demo" class="py-20 bg-slate-800">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">Interactive Demo</h2>
+                <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                    Experience the power of natural language blockchain interactions. Connect your wallet and try real Solana operations with simple English commands.
+                </p>
+            </div>
             
-            <div class="demo-container">
-                <div class="demo-form">
-                    <div class="form-group">
-                        <label class="form-label">Natural Language Prompt</label>
-                        <textarea 
-                            id="prompt-input" 
-                            class="form-input form-textarea" 
-                            placeholder="e.g., Transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-                        ></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Wallet Connection</label>
-                        <button id="connect-wallet-btn" class="btn btn-wallet" onclick="connectWallet()">
-                            Connect Wallet
-                        </button>
-                        <div id="wallet-not-found" class="wallet-not-found" style="display: none;">
-                            <p>Install <a href="https://phantom.app" target="_blank">Phantom</a> or another Solana wallet to sign transactions</p>
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-slate-900 rounded-2xl border border-slate-700 p-8 shadow-2xl">
+                    <div class="space-y-6">
+                        <!-- Natural Language Input -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-slate-200">Natural Language Prompt</label>
+                            <div class="relative">
+                                <textarea 
+                                    id="prompt-input" 
+                                    class="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none transition-all duration-200"
+                                    placeholder="e.g., Transfer 0.5 SOL to 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+                                ></textarea>
+                                <div class="absolute bottom-3 right-3 text-xs text-slate-500">
+                                    Ctrl+Enter to build
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Payer Address</label>
-                        <input 
-                            type="text" 
-                            id="payer-input" 
-                            class="form-input" 
-                            placeholder="Your wallet address (optional - uses default if empty)"
-                        />
-                    </div>
 
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; cursor: pointer; user-select: none;" onclick="toggleSimulation()">
-                        <div id="toggle-track" style="position: relative; width: 44px; height: 24px; background: #333; border-radius: 24px; transition: background 0.3s; flex-shrink: 0;">
-                            <div id="toggle-knob" style="position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #666; border-radius: 50%; transition: all 0.3s;"></div>
+                        <!-- Wallet Connection -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-slate-200">Wallet Connection</label>
+                            <button id="connect-wallet-btn" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 border border-emerald-500 text-white font-medium rounded-xl transition-all duration-200 hover:scale-105" onclick="connectWallet()">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                Connect Wallet
+                            </button>
+                            <div id="wallet-not-found" class="hidden p-4 bg-red-900/50 border border-red-700 rounded-xl text-red-200">
+                                <p>Install <a href="https://phantom.app" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">Phantom</a> or another Solana wallet to sign transactions</p>
+                            </div>
                         </div>
-                        <input type="hidden" id="simulate-toggle" value="off">
-                        <span style="color: var(--text-secondary); font-size: 0.85rem;" id="simulate-label">Simulate transaction <span style="color: var(--text-muted);">(requires funded wallet)</span></span>
+                        
+                        <!-- Payer Address -->
+                        <div class="space-y-3">
+                            <label class="block text-sm font-medium text-slate-200">Payer Address</label>
+                            <input 
+                                type="text" 
+                                id="payer-input" 
+                                class="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-slate-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all duration-200"
+                                placeholder="Your wallet address (optional - uses default if empty)"
+                            />
+                        </div>
+
+                        <!-- Simulation Toggle -->
+                        <div class="flex items-center space-x-3">
+                            <div class="flex items-center space-x-3 cursor-pointer select-none" onclick="toggleSimulation()">
+                                <div id="toggle-track" class="relative w-12 h-6 bg-slate-600 rounded-full transition-all duration-300">
+                                    <div id="toggle-knob" class="absolute top-0.5 left-0.5 w-5 h-5 bg-slate-400 rounded-full transition-all duration-300"></div>
+                                </div>
+                                <input type="hidden" id="simulate-toggle" value="off">
+                                <span class="text-sm text-slate-300" id="simulate-label">
+                                    Simulate transaction 
+                                    <span class="text-slate-500">(requires funded wallet)</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Example Prompts -->
+                        <div class="space-y-3">
+                            <p class="text-sm text-slate-400 flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                                Try an example prompt:
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Ape 2 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
+                                    <span class="text-orange-400">🔥</span> Ape 2 SOL into BONK
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Convert 100 USDC to SOL with 0.5% slippage')">
+                                    <span class="text-blue-400">💱</span> Convert 100 USDC to SOL
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Liquid stake 10 SOL with Marinade')">
+                                    <span class="text-purple-400">🥩</span> Liquid stake with Marinade
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Write onchain memo: gm from SolForge')">
+                                    <span class="text-green-400">📝</span> Write onchain memo
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Swap 5 SOL for BONK on Jupiter')">
+                                    <span class="text-yellow-400">🔄</span> Swap SOL for BONK
+                                </button>
+                                <button class="text-left p-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-emerald-500 rounded-lg text-sm text-slate-300 hover:text-white font-mono transition-all duration-200 hover-lift" onclick="setExample('Buy 1 SOL of pair JDDgQhrQDie1AHAYRqpKW68EiZQpGfmJaNdZrqabAguq')">
+                                    <span class="text-pink-400">💎</span> Buy SOL of pair
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Build Button -->
+                        <button id="build-btn" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/25 flex items-center justify-center" onclick="buildTransaction()">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Build Transaction
+                        </button>
                     </div>
                     
-                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">👆 Try an example prompt:</p>
-                    <div class="examples-grid">
-                        <button class="example-btn" onclick="setExample('Ape 2 SOL into DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263')">
-                            🔥 Ape 2 SOL into BONK
+                    <!-- Output Section -->
+                    <div class="mt-8 space-y-4">
+                        <label class="block text-sm font-medium text-slate-200">Transaction Output</label>
+                        <div class="relative">
+                            <div id="demo-output" class="code-highlight border border-slate-600 rounded-xl p-6 min-h-[200px] font-mono text-sm text-slate-300 whitespace-pre-wrap overflow-x-auto">
+                                Click "Build Transaction" to see the API response...
+                            </div>
+                            <button class="absolute top-4 right-4 p-2 text-slate-400 hover:text-white transition-colors" onclick="copyToClipboard('demo-output')" title="Copy to clipboard">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <button id="sign-send-btn" class="hidden w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/25 flex items-center justify-center" onclick="signAndSendTransaction()">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            Sign & Send Transaction
                         </button>
-                        <button class="example-btn" onclick="setExample('Convert 100 USDC to SOL with 0.5% slippage')">
-                            💱 Convert 100 USDC to SOL with 0.5% slippage
-                        </button>
-                        <button class="example-btn" onclick="setExample('Liquid stake 10 SOL with Marinade')">
-                            🥩 Liquid stake 10 SOL with Marinade
-                        </button>
-                        <button class="example-btn" onclick="setExample('Write onchain memo: gm from SolForge')">
-                            📝 Write onchain memo: gm from SolForge
-                        </button>
-                        <button class="example-btn" onclick="setExample('Swap 5 SOL for BONK on Jupiter')">
-                            🔄 Swap 5 SOL for BONK on Jupiter
-                        </button>
-                        <button class="example-btn" onclick="setExample('Buy 1 SOL of pair JDDgQhrQDie1AHAYRqpKW68EiZQpGfmJaNdZrqabAguq')">
-                            💎 Buy 1 SOL of pair
-                        </button>
+                        
+                        <div id="transaction-result" class="hidden"></div>
                     </div>
-                    
-                    <button id="build-btn" class="btn btn-primary" onclick="buildTransaction()">
-                        Build Transaction
-                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-20 bg-slate-900">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">Why SolForge?</h2>
+                <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                    Built for the next generation of blockchain applications, SolForge provides unmatched capabilities for Solana development.
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="w-12 h-12 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-white">12+ Protocols</h3>
+                    <p class="text-slate-300 text-sm">
+                        Jupiter, Raydium, Orca, Marinade, Pump.fun, and more — all in one unified API.
+                    </p>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">Transaction Output</label>
-                    <div id="demo-output" class="demo-output">
-                        Click "Build Transaction" to see the API response...
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="w-12 h-12 bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
                     </div>
-                    <button id="sign-send-btn" class="btn btn-sign" onclick="signAndSendTransaction()" style="display: none; margin-top: 1rem;">
-                        Sign & Send Transaction
-                    </button>
-                    <div id="transaction-result" style="display: none;"></div>
+                    <h3 class="text-xl font-semibold mb-2 text-white">Jupiter Routing</h3>
+                    <p class="text-slate-300 text-sm">
+                        Optimal swap paths with the best prices across all Solana DEXs and liquidity sources.
+                    </p>
                 </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Supported Protocols Section -->
-    <section id="protocols" class="section">
-        <div class="container">
-            <h2 class="section-title">Supported Protocols</h2>
-            <p class="section-subtitle">
-                SolForge supports 12 major Solana protocols, enabling seamless transaction building across the ecosystem.
-            </p>
-            
-            <div class="protocols-grid">
-                <div class="protocol-card">
-                    <div class="protocol-name">System Program</div>
-                    <div class="protocol-description">SOL transfers, account creation</div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-white">DexScreener Resolution</h3>
+                    <p class="text-slate-300 text-sm">
+                        Auto-detect protocols from token addresses and trading pairs with real-time data.
+                    </p>
                 </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">SPL Token</div>
-                    <div class="protocol-description">Token transfers, ATA management</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Jupiter</div>
-                    <div class="protocol-description">Optimal swap routing</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Memo</div>
-                    <div class="protocol-description">On-chain messages</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Jito</div>
-                    <div class="protocol-description">MEV protection tips</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Raydium AMM</div>
-                    <div class="protocol-description">DEX swaps</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Pump.fun</div>
-                    <div class="protocol-description">Bonding curve trades</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Orca Whirlpool</div>
-                    <div class="protocol-description">Concentrated liquidity</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Marinade</div>
-                    <div class="protocol-description">Liquid staking (SOL → mSOL)</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Meteora DLMM</div>
-                    <div class="protocol-description">Dynamic liquidity</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Token-2022</div>
-                    <div class="protocol-description">Extended token operations</div>
-                </div>
-                <div class="protocol-card">
-                    <div class="protocol-name">Stake Program</div>
-                    <div class="protocol-description">Native SOL staking</div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="w-12 h-12 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2 text-white">Natural Language</h3>
+                    <p class="text-slate-300 text-sm">
+                        Transform plain English commands into executable Solana transactions effortlessly.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- API Reference Section -->
-    <section id="api" class="section api-reference">
-        <div class="container">
-            <h2 class="section-title">API Reference</h2>
-            <p class="section-subtitle">
-                Powerful endpoints for every use case. From natural language to structured JSON, SolForge has you covered.
-            </p>
+    <section id="api" class="py-20 bg-slate-800">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4 text-white">API Reference</h2>
+                <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+                    Powerful endpoints for every use case. From natural language to structured JSON, SolForge has you covered.
+                </p>
+            </div>
             
-            <div class="api-endpoints">
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-post">POST</span>
-                        <span class="endpoint-path">/api/build</span>
+            <div class="max-w-4xl mx-auto space-y-4">
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/build/natural</span>
                     </div>
-                    <div class="endpoint-description">
-                        Build transactions from structured intent objects with precise control over parameters.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Transform natural language descriptions into executable Solana transactions with intelligent protocol detection.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-post">POST</span>
-                        <span class="endpoint-path">/api/build/natural</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/build</span>
                     </div>
-                    <div class="endpoint-description">
-                        Transform natural language descriptions into executable Solana transactions.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Build transactions from structured intent objects with precise control over parameters and execution flow.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-post">POST</span>
-                        <span class="endpoint-path">/api/build/multi</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/build/multi</span>
                     </div>
-                    <div class="endpoint-description">
-                        Combine multiple operations into one atomic transaction for complex workflows.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Combine multiple operations into one atomic transaction for complex workflows and batch operations.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-post">POST</span>
-                        <span class="endpoint-path">/api/decode</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/decode</span>
                     </div>
-                    <div class="endpoint-description">
-                        Decode and analyze any Solana transaction to understand its structure and purpose.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Decode and analyze any Solana transaction to understand its structure, purpose, and estimated impact.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-post">POST</span>
-                        <span class="endpoint-path">/api/estimate</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-semibold font-mono rounded mr-3">POST</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/estimate</span>
                     </div>
-                    <div class="endpoint-description">
-                        Estimate transaction costs including fees, rent, and compute units before building.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Estimate transaction costs including fees, rent, and compute units before building or executing.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-get">GET</span>
-                        <span class="endpoint-path">/api/protocols</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/resolve</span>
                     </div>
-                    <div class="endpoint-description">
-                        List all supported protocols and their current status and capabilities.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Resolve token addresses, trading pairs, and protocol information using DexScreener integration.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-get">GET</span>
-                        <span class="endpoint-path">/api/protocols/:name/schema</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/protocols</span>
                     </div>
-                    <div class="endpoint-description">
-                        Auto-discover required parameters and options for any specific protocol.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        List all supported protocols with their current status, capabilities, and supported operations.
+                    </p>
                 </div>
                 
-                <div class="endpoint">
-                    <div>
-                        <span class="endpoint-method method-get">GET</span>
-                        <span class="endpoint-path">/api/docs</span>
+                <div class="bg-slate-900 border border-slate-700 rounded-xl p-6 hover-lift">
+                    <div class="flex flex-wrap items-center mb-3">
+                        <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-semibold font-mono rounded mr-3">GET</span>
+                        <span class="font-mono text-slate-200 text-sm">/api/docs</span>
                     </div>
-                    <div class="endpoint-description">
-                        Access complete API documentation with examples and integration guides.
-                    </div>
+                    <p class="text-slate-300 text-sm">
+                        Access complete API documentation with examples, integration guides, and best practices.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <p>Built by SolForge Agent for the Colosseum Agent Hackathon 2026</p>
-                <p>
-                    <a href="https://github.com/rikisann/solforge" target="_blank">
-                        View on GitHub →
+    <footer class="py-12 bg-slate-900 border-t border-slate-700">
+        <div class="container mx-auto px-6">
+            <div class="text-center space-y-4">
+                <div class="flex items-center justify-center space-x-2 text-lg">
+                    <span class="text-slate-300">Built by</span>
+                    <span class="gradient-text font-semibold">AI agents</span>
+                    <span class="text-slate-300">for the</span>
+                    <span class="text-white font-semibold">Colosseum Hackathon</span>
+                </div>
+                <div class="flex items-center justify-center space-x-6">
+                    <a href="https://github.com/rikisann/solforge" target="_blank" class="inline-flex items-center text-emerald-400 hover:text-emerald-300 transition-colors group">
+                        <svg class="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                        </svg>
+                        View on GitHub
                     </a>
+                </div>
+                <p class="text-sm text-slate-500">
+                    © 2026 SolForge. Empowering the future of blockchain interaction.
                 </p>
             </div>
         </div>
@@ -821,13 +467,13 @@
 
             try {
                 // Hide wallet not found message
-                walletNotFound.style.display = 'none';
+                walletNotFound.classList.add('hidden');
 
                 // Check for Phantom or other Solana wallet providers
                 const provider = window.phantom?.solana || window.solana;
                 
                 if (!provider) {
-                    walletNotFound.style.display = 'block';
+                    walletNotFound.classList.remove('hidden');
                     return;
                 }
 
@@ -844,18 +490,17 @@
 
                 // Update UI
                 connectBtn.innerHTML = `
-                    <div class="wallet-status">
-                        <div class="wallet-dot"></div>
-                        <span class="wallet-address">Connected: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}</span>
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 bg-emerald-400 rounded-full mr-2"></div>
+                        <span class="font-mono">Connected: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}</span>
                     </div>
                 `;
-                connectBtn.classList.add('connected');
+                connectBtn.classList.add('bg-emerald-500/20', 'border-emerald-500');
                 connectBtn.disabled = false;
 
                 // Auto-fill payer address
                 payerInput.value = publicKey;
-                payerInput.style.background = 'rgba(0, 255, 136, 0.05)';
-                payerInput.style.borderColor = 'var(--accent)';
+                payerInput.classList.add('ring-2', 'ring-emerald-500', 'border-emerald-500');
 
                 console.log('Wallet connected:', publicKey);
 
@@ -891,7 +536,7 @@
             try {
                 signBtn.textContent = 'Signing...';
                 signBtn.disabled = true;
-                resultDiv.style.display = 'none';
+                resultDiv.classList.add('hidden');
 
                 const transactionBase64 = lastTransactionData.transaction;
                 
@@ -900,14 +545,22 @@
                 let isVersioned = false;
                 
                 try {
-                    const binaryString = atob(transactionBase64); const transactionBuffer = new Uint8Array(binaryString.length); for (let i = 0; i < binaryString.length; i++) { transactionBuffer[i] = binaryString.charCodeAt(i); }
+                    const binaryString = atob(transactionBase64); 
+                    const transactionBuffer = new Uint8Array(binaryString.length); 
+                    for (let i = 0; i < binaryString.length; i++) { 
+                        transactionBuffer[i] = binaryString.charCodeAt(i); 
+                    }
                     transaction = solanaWeb3.VersionedTransaction.deserialize(transactionBuffer);
                     isVersioned = true;
                     console.log('Deserialized as VersionedTransaction');
                 } catch (versionedError) {
                     console.log('Failed to deserialize as VersionedTransaction, trying legacy:', versionedError.message);
                     try {
-                        const binaryString = atob(transactionBase64); const transactionBuffer = new Uint8Array(binaryString.length); for (let i = 0; i < binaryString.length; i++) { transactionBuffer[i] = binaryString.charCodeAt(i); }
+                        const binaryString = atob(transactionBase64); 
+                        const transactionBuffer = new Uint8Array(binaryString.length); 
+                        for (let i = 0; i < binaryString.length; i++) { 
+                            transactionBuffer[i] = binaryString.charCodeAt(i); 
+                        }
                         transaction = solanaWeb3.Transaction.from(transactionBuffer);
                         isVersioned = false;
                         console.log('Deserialized as legacy Transaction');
@@ -944,13 +597,26 @@
 
                 // Show success result
                 resultDiv.innerHTML = `
-                    <div class="transaction-result">
-                        <strong>Transaction sent successfully! 🎉</strong><br>
-                        <strong>Signature:</strong> <span style="font-family: monospace; word-break: break-all;">${signature}</span><br>
-                        <strong>Explorer:</strong> <a href="https://solscan.io/tx/${signature}" target="_blank">View on Solscan →</a>
+                    <div class="p-4 bg-emerald-900/50 border border-emerald-700 rounded-xl text-emerald-200">
+                        <div class="flex items-center mb-2">
+                            <svg class="w-5 h-5 text-emerald-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <strong>Transaction sent successfully! 🎉</strong>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <strong>Signature:</strong> 
+                                <span class="font-mono text-xs break-all">${signature}</span>
+                            </div>
+                            <div>
+                                <strong>Explorer:</strong> 
+                                <a href="https://solscan.io/tx/${signature}" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline">View on Solscan →</a>
+                            </div>
+                        </div>
                     </div>
                 `;
-                resultDiv.style.display = 'block';
+                resultDiv.classList.remove('hidden');
 
                 console.log('Transaction sent:', signature);
 
@@ -967,12 +633,17 @@
                 }
 
                 resultDiv.innerHTML = `
-                    <div style="background: rgba(255, 85, 85, 0.1); border: 1px solid var(--error); border-radius: 8px; padding: 1rem; color: var(--error);">
-                        <strong>Transaction failed:</strong><br>
-                        ${errorMessage}
+                    <div class="p-4 bg-red-900/50 border border-red-700 rounded-xl text-red-200">
+                        <div class="flex items-center mb-2">
+                            <svg class="w-5 h-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <strong>Transaction failed</strong>
+                        </div>
+                        <p class="text-sm">${errorMessage}</p>
                     </div>
                 `;
-                resultDiv.style.display = 'block';
+                resultDiv.classList.remove('hidden');
 
             } finally {
                 signBtn.textContent = 'Sign & Send Transaction';
@@ -986,13 +657,15 @@
             const track = document.getElementById('toggle-track');
             const knob = document.getElementById('toggle-knob');
             if (simulationEnabled) {
-                track.style.background = '#00ff88';
-                knob.style.left = '22px';
-                knob.style.background = '#fff';
+                track.classList.remove('bg-slate-600');
+                track.classList.add('bg-emerald-500');
+                knob.classList.remove('bg-slate-400', 'left-0.5');
+                knob.classList.add('bg-white', 'left-6');
             } else {
-                track.style.background = '#333';
-                knob.style.left = '2px';
-                knob.style.background = '#666';
+                track.classList.remove('bg-emerald-500');
+                track.classList.add('bg-slate-600');
+                knob.classList.remove('bg-white', 'left-6');
+                knob.classList.add('bg-slate-400', 'left-0.5');
             }
         }
 
@@ -1002,6 +675,23 @@
             document.getElementById('prompt-input').focus();
             // Auto-trigger build so the user sees it work immediately
             buildTransaction();
+        }
+
+        // Copy to clipboard function
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                // Show feedback
+                const button = element.parentNode.querySelector('button');
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 1000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
         }
 
         // Build transaction via API
@@ -1018,20 +708,21 @@
             
             if (!prompt) {
                 outputDiv.textContent = 'Please enter a natural language prompt.';
-                outputDiv.className = 'demo-output error';
+                outputDiv.classList.add('text-red-400');
                 return;
             }
 
             // Hide previous results
-            signBtn.style.display = 'none';
-            resultDiv.style.display = 'none';
+            signBtn.classList.add('hidden');
+            resultDiv.classList.add('hidden');
             lastTransactionData = null;
             
             // Show loading state
             buildBtn.disabled = true;
             buildBtn.textContent = 'Building...';
             outputDiv.textContent = 'Building transaction...';
-            outputDiv.className = 'demo-output loading';
+            outputDiv.classList.remove('text-red-400');
+            outputDiv.classList.add('text-emerald-400');
             
             try {
                 const requestBody = {
@@ -1054,18 +745,23 @@
                 
                 // Display the response
                 outputDiv.textContent = JSON.stringify(data, null, 2);
-                outputDiv.className = response.ok ? 'demo-output' : 'demo-output error';
+                outputDiv.classList.remove('text-emerald-400');
+                if (!response.ok) {
+                    outputDiv.classList.add('text-red-400');
+                } else {
+                    outputDiv.classList.add('text-slate-300');
+                }
 
                 // Show Sign & Send button if successful and wallet is connected
                 if (response.ok && data.success && data.transaction && connectedWallet) {
                     lastTransactionData = data;
-                    signBtn.style.display = 'inline-flex';
+                    signBtn.classList.remove('hidden');
                 }
                 
             } catch (error) {
                 console.error('API Error:', error);
                 outputDiv.textContent = `Error: ${error.message}\n\nThis demo requires the SolForge API to be running. Make sure you've started the server with 'npm run dev' or 'npm start'.`;
-                outputDiv.className = 'demo-output error';
+                outputDiv.classList.add('text-red-400');
             } finally {
                 // Reset button state
                 buildBtn.disabled = false;
@@ -1086,17 +782,6 @@
                 }
             });
         });
-        
-        // Add some interactivity to protocol cards
-        document.querySelectorAll('.protocol-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const protocolName = this.querySelector('.protocol-name').textContent;
-                const description = this.querySelector('.protocol-description').textContent;
-                
-                // You could expand this to show more details, link to docs, etc.
-                console.log(`Protocol clicked: ${protocolName} - ${description}`);
-            });
-        });
 
         // Handle Enter key in prompt input
         document.getElementById('prompt-input').addEventListener('keydown', function(e) {
@@ -1115,7 +800,7 @@
         // Check for wallet on page load
         window.addEventListener('load', function() {
             if (!window.phantom?.solana && !window.solana) {
-                document.getElementById('wallet-not-found').style.display = 'block';
+                document.getElementById('wallet-not-found').classList.remove('hidden');
             }
         });
     </script>
